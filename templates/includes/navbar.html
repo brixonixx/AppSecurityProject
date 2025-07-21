@@ -1,0 +1,21 @@
+<nav class="navbar navbar-expand-lg navbar-dark" style="background-color: #16537e;">
+  <div class="container-fluid">
+    <a class="navbar-brand font-weight-bold text-white" href="/">Silversage</a>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ml-auto">
+        <li class="nav-item"><a class="nav-link" href="/calendar">Schedule</a></li>
+        <li class="nav-item"><a class="nav-link" href="/forum">Forum</a></li>
+        <li class="nav-item"><a class="nav-link" href="/events">Events</a></li>
+        <li class="nav-item"><a class="nav-link" href="/">Feedback</a></li>
+        <li class="nav-item"><a class="nav-link" href="/">FAQ</a></li>
+      </ul>
+    </div>
+
+    <!-- Profile Circle -->
+    {% if session['username'] %}
+    <a href="/profile" class="btn btn-light rounded-circle ml-3" style="width: 40px; height: 40px; font-weight: bold;">
+      {{ session['username'][0]|upper }}
+    </a>
+    {% endif %}
+  </div>
+</nav>
