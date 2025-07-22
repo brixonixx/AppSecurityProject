@@ -1,19 +1,25 @@
 {% extends "base.html" %}
 {% block title %}Community Forum{% endblock %}
+
 {% block content %}
 <div class="container mt-4">
-  <h2>Community Forum</h2>
-  <a href="/forum/new" class="btn btn-primary mb-3">+ New Post</a>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Community Forum</h2>
+    <a href="{{ url_for('new_post') }}" class="btn btn-success">+ New Post</a>
+  </div>
+
   {% if posts %}
     {% for post in posts %}
-      <div class="card mb-2">
-        <div class="card-header">{{ post.title }}</div>
-        <div class="card-body">{{ post.content }}</div>
-        <div class="card-footer text-muted">Posted by {{ post.author }}</div>
+    <div class="card mb-3 shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">{{ post.title }}</h5>
+        <p class="card-text">{{ post.content }}</p>
+        <p class="card-subtitle text-muted small">Posted by {{ post.author }}</p>
       </div>
+    </div>
     {% endfor %}
   {% else %}
-    <p>No posts yet.</p>
+    <p class="text-muted">No posts yet. Be the first to post!</p>
   {% endif %}
 </div>
 {% endblock %}
