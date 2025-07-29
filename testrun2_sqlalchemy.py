@@ -59,6 +59,25 @@ def new_post():
 
     return render_template('new_post.html')
 
+@app.route('/forum/delete/<int:post_id>', methods=['POST'])
+def delete_post(post_id):
+    if 'username' not in session:
+        flash("Login required", "warning")
+        return redirect(url_for('login'))
+
+    post = Post.query.get_or_404(post_id)
+
+    # Ensure only the author can delete
+    if post.author != session['username']:
+        flash("You are not authorized to delete this post.", "danger")
+        return redirect(url_for('forum'))
+
+    db.session.delete(post)
+    db.session.commit()
+    flash("Post deleted successfully!", "success")
+    return redirect(url_for('forum'))
+
+
 ### ------------------ VOLUNTEER ROUTES ------------------- ###
 
 @app.route('/volunteer')
