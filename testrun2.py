@@ -1,70 +1,184 @@
-# testrun2.py - Extended with Community Forum, Volunteer Requests, and Scheduler
+# testrun2.py - With SQLAlchemy-based Forum and Volunteer Features + Comments
 
 from flask import Flask, request, redirect, url_for, render_template, session, flash
+from flask_sqlalchemy import SQLAlchemy
 from wtforms import Form, StringField, TextAreaField, IntegerField, validators
-from wtforms.validators import NumberRange, DataRequired, Regexp
-import shelve
+from datetime import datetime
 import uuid
-
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
-### ------------------ EXISTING CLASSES (UNCHANGED) ------------------- ###
-# Points, User, Reward, Delivery, ConfirmDeliveryForm, etc.
-# (keep your existing ones)
+# SQLAlchemy Config
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
 
-### ------------------ NEW CLASSES FOR FEATURES ------------------- ###
-class Post:
-    def __init__(self, post_id, title, content, author):
-        self.post_id = post_id
-        self.title = title
-        self.content = content
-        self.author = author
+### ------------------ MODELS ------------------- ###
 
-class VolunteerRequest:
-    def __init__(self, request_id, title, description, requester, claimed_by=None):
-        self.request_id = request_id
-        self.title = title
-        self.description = description
-        self.requester = requester
-        self.claimed_by = claimed_by
+class Post(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    author = db.Column(db.String(80), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=True)
+    
+    # Relationship to comments
+    comments = db.relationship('Comment', backref='post', lazy=True, cascade='all, delete-orphan')
+    
+    @property
+    def comment_count(self):
+        return len(self.comments)
 
+class Comment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.Text, nullable=False)
+    author = db.Column(db.String(80), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
+
+class VolunteerRequest(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    requester = db.Column(db.String(80), nullable=False)
+    claimed_by = db.Column(db.String(80), nullable=True)
+
+### ------------------ CUSTOM FILTERS ------------------- ###
+
+@app.template_filter('nl2br')
+def nl2br_filter(text):
+    """Convert newlines to HTML line breaks"""
+    if not text:
+        return text
+    return text.replace('\n', '<br>')
+
+### ------------------ DUMMY LOGIN ------------------- ###
+@app.before_request
+def dummy_login():
+    if 'username' not in session:
+        session['username'] = 'testuser'
 
 ### ------------------ FORUM ROUTES ------------------- ###
+
 @app.route('/forum')
 def forum():
-    with shelve.open('forum.db', 'c') as db:
-        posts = db.get('posts', [])
+    posts = Post.query.order_by(Post.id.desc()).all()
     return render_template('forum.html', posts=posts)
+
+@app.route('/forum/post/<int:post_id>')
+def view_post(post_id):
+    post = Post.query.get_or_404(post_id)
+    comments = Comment.query.filter_by(post_id=post_id).order_by(Comment.created_at.asc()).all()
+    return render_template('post_detail.html', post=post, comments=comments)
 
 @app.route('/forum/new', methods=['GET', 'POST'])
 def new_post():
     if 'username' not in session:
         flash("Login required", "warning")
         return redirect(url_for('login'))
+
     if request.method == 'POST':
         title = request.form.get('title')
         content = request.form.get('content')
         author = session['username']
-        post_id = str(uuid.uuid4())
-        new_post = Post(post_id, title, content, author)
-
-        with shelve.open('forum.db', 'c') as db:
-            posts = db.get('posts', [])
-            posts.append(new_post)
-            db['posts'] = posts
-
+        post = Post(title=title, content=content, author=author)
+        db.session.add(post)
+        db.session.commit()
         flash("Post created successfully!", "success")
         return redirect(url_for('forum'))
+
     return render_template('new_post.html')
 
+@app.route('/forum/edit/<int:post_id>', methods=['GET', 'POST'])
+def edit_post(post_id):
+    if 'username' not in session:
+        flash("Login required", "warning")
+        return redirect(url_for('login'))
+
+    post = Post.query.get_or_404(post_id)
+
+    # Ensure only the author can edit
+    if post.author != session['username']:
+        flash("You are not authorized to edit this post.", "danger")
+        return redirect(url_for('view_post', post_id=post_id))
+
+    if request.method == 'POST':
+        post.title = request.form.get('title')
+        post.content = request.form.get('content')
+        db.session.commit()
+        flash("Post updated successfully!", "success")
+        return redirect(url_for('view_post', post_id=post_id))
+
+    return render_template('edit_post.html', post=post)
+
+@app.route('/forum/delete/<int:post_id>', methods=['POST'])
+def delete_post(post_id):
+    if 'username' not in session:
+        flash("Login required", "warning")
+        return redirect(url_for('login'))
+
+    post = Post.query.get_or_404(post_id)
+
+    # Ensure only the author can delete
+    if post.author != session['username']:
+        flash("You are not authorized to delete this post.", "danger")
+        return redirect(url_for('forum'))
+
+    db.session.delete(post)
+    db.session.commit()
+    flash("Post deleted successfully!", "success")
+    return redirect(url_for('forum'))
+
+### ------------------ COMMENT ROUTES ------------------- ###
+
+@app.route('/forum/post/<int:post_id>/comment', methods=['POST'])
+def add_comment(post_id):
+    if 'username' not in session:
+        flash("Login required", "warning")
+        return redirect(url_for('login'))
+
+    post = Post.query.get_or_404(post_id)
+    comment_content = request.form.get('comment')
+    
+    if comment_content and comment_content.strip():
+        comment = Comment(
+            content=comment_content.strip(),
+            author=session['username'],
+            post_id=post_id
+        )
+        db.session.add(comment)
+        db.session.commit()
+        flash("Comment added successfully!", "success")
+    else:
+        flash("Comment cannot be empty.", "warning")
+
+    return redirect(url_for('view_post', post_id=post_id))
+
+@app.route('/comment/delete/<int:comment_id>', methods=['POST'])
+def delete_comment(comment_id):
+    if 'username' not in session:
+        flash("Login required", "warning")
+        return redirect(url_for('login'))
+
+    comment = Comment.query.get_or_404(comment_id)
+    post_id = comment.post_id
+
+    # Ensure only the comment author can delete
+    if comment.author != session['username']:
+        flash("You are not authorized to delete this comment.", "danger")
+        return redirect(url_for('view_post', post_id=post_id))
+
+    db.session.delete(comment)
+    db.session.commit()
+    flash("Comment deleted successfully!", "success")
+    return redirect(url_for('view_post', post_id=post_id))
 
 ### ------------------ VOLUNTEER ROUTES ------------------- ###
+
 @app.route('/volunteer')
 def view_volunteers():
-    with shelve.open('volunteers.db', 'c') as db:
-        requests = db.get('requests', [])
+    requests = VolunteerRequest.query.all()
     return render_template('volunteer.html', requests=requests)
 
 @app.route('/volunteer/new', methods=['GET', 'POST'])
@@ -72,50 +186,32 @@ def new_volunteer_request():
     if 'username' not in session:
         flash("Login required", "warning")
         return redirect(url_for('login'))
+
     if request.method == 'POST':
         title = request.form.get('title')
         description = request.form.get('description')
         requester = session['username']
-        request_id = str(uuid.uuid4())
-        vr = VolunteerRequest(request_id, title, description, requester)
-
-        with shelve.open('volunteers.db', 'c') as db:
-            requests = db.get('requests', [])
-            requests.append(vr)
-            db['requests'] = requests
-
+        vr = VolunteerRequest(title=title, description=description, requester=requester)
+        db.session.add(vr)
+        db.session.commit()
         flash("Support request posted!", "success")
         return redirect(url_for('view_volunteers'))
+
     return render_template('new_volunteer.html')
 
-@app.route('/volunteer/claim/<request_id>')
+@app.route('/volunteer/claim/<int:request_id>')
 def claim_volunteer_request(request_id):
     if 'username' not in session:
         flash("Login required", "warning")
         return redirect(url_for('login'))
 
-    with shelve.open('volunteers.db', 'c') as db:
-        requests = db.get('requests', [])
-        for r in requests:
-            if r.request_id == request_id and r.claimed_by is None:
-                r.claimed_by = session['username']
-                break
-        db['requests'] = requests
+    vr = VolunteerRequest.query.get(request_id)
+    if vr and not vr.claimed_by:
+        vr.claimed_by = session['username']
+        db.session.commit()
+        flash("You have claimed this request!", "info")
 
-    flash("You have claimed this request!", "info")
     return redirect(url_for('view_volunteers'))
-
-### ------------------ EXISTING ROUTES REMAIN HERE ------------------- ###
-# Keep your existing routes like /login, /home, /points, /admin, etc.
-# Don’t delete anything from the original file – just add the above code
-
-### ------------------ TEMPLATES NEEDED ------------------- ###
-# forum.html
-# new_post.html
-# volunteer.html
-# new_volunteer.html
-
-
 
 @app.route('/calendar')
 def calendar_page():
@@ -125,8 +221,7 @@ def calendar_page():
 def index():
     return redirect(url_for('calendar_page'))
 
-print("smd")
-
 if __name__ == '__main__':
-
+    with app.app_context():
+        db.create_all()
     app.run(debug=True)

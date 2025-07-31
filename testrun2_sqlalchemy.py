@@ -1,8 +1,9 @@
-# testrun2.py - With SQLAlchemy-based Forum and Volunteer Features
+# testrun2.py - With SQLAlchemy-based Forum and Volunteer Features + Comments
 
 from flask import Flask, request, redirect, url_for, render_template, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from wtforms import Form, StringField, TextAreaField, IntegerField, validators
+from datetime import datetime
 import uuid
 
 app = Flask(__name__)
@@ -20,6 +21,21 @@ class Post(db.Model):
     title = db.Column(db.String(100), nullable=False)
     content = db.Column(db.Text, nullable=False)
     author = db.Column(db.String(80), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=True)
+    
+    # Relationship to comments
+    comments = db.relationship('Comment', backref='post', lazy=True, cascade='all, delete-orphan')
+    
+    @property
+    def comment_count(self):
+        return len(self.comments)
+
+class Comment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.Text, nullable=False)
+    author = db.Column(db.String(80), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
 
 class VolunteerRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -27,6 +43,15 @@ class VolunteerRequest(db.Model):
     description = db.Column(db.Text, nullable=False)
     requester = db.Column(db.String(80), nullable=False)
     claimed_by = db.Column(db.String(80), nullable=True)
+
+### ------------------ CUSTOM FILTERS ------------------- ###
+
+@app.template_filter('nl2br')
+def nl2br_filter(text):
+    """Convert newlines to HTML line breaks"""
+    if not text:
+        return text
+    return text.replace('\n', '<br>')
 
 ### ------------------ DUMMY LOGIN ------------------- ###
 @app.before_request
@@ -40,6 +65,12 @@ def dummy_login():
 def forum():
     posts = Post.query.order_by(Post.id.desc()).all()
     return render_template('forum.html', posts=posts)
+
+@app.route('/forum/post/<int:post_id>')
+def view_post(post_id):
+    post = Post.query.get_or_404(post_id)
+    comments = Comment.query.filter_by(post_id=post_id).order_by(Comment.created_at.asc()).all()
+    return render_template('post_detail.html', post=post, comments=comments)
 
 @app.route('/forum/new', methods=['GET', 'POST'])
 def new_post():
@@ -59,6 +90,28 @@ def new_post():
 
     return render_template('new_post.html')
 
+@app.route('/forum/edit/<int:post_id>', methods=['GET', 'POST'])
+def edit_post(post_id):
+    if 'username' not in session:
+        flash("Login required", "warning")
+        return redirect(url_for('login'))
+
+    post = Post.query.get_or_404(post_id)
+
+    # Ensure only the author can edit
+    if post.author != session['username']:
+        flash("You are not authorized to edit this post.", "danger")
+        return redirect(url_for('view_post', post_id=post_id))
+
+    if request.method == 'POST':
+        post.title = request.form.get('title')
+        post.content = request.form.get('content')
+        db.session.commit()
+        flash("Post updated successfully!", "success")
+        return redirect(url_for('view_post', post_id=post_id))
+
+    return render_template('edit_post.html', post=post)
+
 @app.route('/forum/delete/<int:post_id>', methods=['POST'])
 def delete_post(post_id):
     if 'username' not in session:
@@ -77,6 +130,49 @@ def delete_post(post_id):
     flash("Post deleted successfully!", "success")
     return redirect(url_for('forum'))
 
+### ------------------ COMMENT ROUTES ------------------- ###
+
+@app.route('/forum/post/<int:post_id>/comment', methods=['POST'])
+def add_comment(post_id):
+    if 'username' not in session:
+        flash("Login required", "warning")
+        return redirect(url_for('login'))
+
+    post = Post.query.get_or_404(post_id)
+    comment_content = request.form.get('comment')
+    
+    if comment_content and comment_content.strip():
+        comment = Comment(
+            content=comment_content.strip(),
+            author=session['username'],
+            post_id=post_id
+        )
+        db.session.add(comment)
+        db.session.commit()
+        flash("Comment added successfully!", "success")
+    else:
+        flash("Comment cannot be empty.", "warning")
+
+    return redirect(url_for('view_post', post_id=post_id))
+
+@app.route('/comment/delete/<int:comment_id>', methods=['POST'])
+def delete_comment(comment_id):
+    if 'username' not in session:
+        flash("Login required", "warning")
+        return redirect(url_for('login'))
+
+    comment = Comment.query.get_or_404(comment_id)
+    post_id = comment.post_id
+
+    # Ensure only the comment author can delete
+    if comment.author != session['username']:
+        flash("You are not authorized to delete this comment.", "danger")
+        return redirect(url_for('view_post', post_id=post_id))
+
+    db.session.delete(comment)
+    db.session.commit()
+    flash("Comment deleted successfully!", "success")
+    return redirect(url_for('view_post', post_id=post_id))
 
 ### ------------------ VOLUNTEER ROUTES ------------------- ###
 
