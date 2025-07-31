@@ -6,12 +6,16 @@ from flask_sqlalchemy import SQLAlchemy
 from wtforms import Form, StringField, TextAreaField, IntegerField, validators
 from datetime import datetime
 import uuid
+import os
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
 # SQLAlchemy Config
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
+    'DATABASE_URL',
+    'mysql+pymysql://forumuser:forumpass@localhost:3306/forumdb'
+)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
