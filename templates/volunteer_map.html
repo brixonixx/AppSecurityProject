@@ -13,10 +13,11 @@
 </div>
 
 <!-- Hidden form to submit location -->
-<form id="helpForm" method="POST" style="display:none;">
+<form id="helpForm" method="POST" action="{{ url_for('volunteer_map') }}" style="display:none;">
   <input type="hidden" name="lat" id="latInput" required>
   <input type="hidden" name="lng" id="lngInput" required>
 </form>
+
 {% endblock %}
 
 {% block scripts %}

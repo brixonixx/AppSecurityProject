@@ -218,25 +218,29 @@ def claim_volunteer_request(request_id):
 @app.route('/volunteer/map', methods=['GET', 'POST'])
 def volunteer_map():
     if request.method == 'POST':
-        # Get user location from form or JSON
         lat = request.form.get('lat', type=float)
         lng = request.form.get('lng', type=float)
-        # You may want to get username or anonymous user here
         username = session.get('username', 'anonymous')
 
         if lat is None or lng is None:
             flash("Location required", "danger")
             return redirect(url_for('volunteer_map'))
 
-        # Create new volunteer request with location
-        vr = VolunteerRequest(title="Help Request", description="User requested help", requester=username, latitude=lat, longitude=lng)
+        vr = VolunteerRequest(
+            title="Help Request",
+            description="User requested help",
+            requester=username,
+            latitude=lat,
+            longitude=lng
+        )
         db.session.add(vr)
         db.session.commit()
+
         flash("Help request sent!", "success")
         return redirect(url_for('volunteer_map'))
 
-    # For GET, render page with requests
     return render_template('volunteer_map.html')
+
 
 @app.route('/volunteer/requests_json')
 def volunteer_requests_json():
