@@ -180,7 +180,8 @@ def delete_comment(comment_id):
 @app.route('/volunteer')
 def view_volunteers():
     requests = VolunteerRequest.query.all()
-    return render_template('volunteer.html', requests=requests)
+    return render_template('volunteer_map.html', requests=requests)
+
 
 @app.route('/volunteer/new', methods=['GET', 'POST'])
 def new_volunteer_request():
