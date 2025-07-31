@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Volunteer Requests Map</title>
+<style>
+  #map {
+    height: 400px;
+    width: 100%;
+  }
+  #help-section {
+    margin-top: 20px;
+  }
+  /* Simple modal styles */
+  .modal {
+    display: none; 
+    position: fixed; 
+    z-index: 10;
+    left: 0; top: 0; width: 100%; height: 100%; 
+    background-color: rgba(0,0,0,0.4);
+  }
+  .modal-content {
+    background: white;
+    margin: 10% auto; 
+    padding: 20px;
+    width: 300px;
+    border-radius: 8px;
+  }
+  .modal-header {
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+  button {
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+  <h1>Volunteer Requests Map</h1>
+
+  <div id="map"></div>
+
+  <div id="help-section">
+    <button id="openHelpBtn" disabled>Send Help</button>
+  </div>
+
+  <!-- Modal for user to enter location -->
+  <div id="helpModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-content">
+      <div class="modal-header" id="modalTitle">Send Help Location</div>
+      <form id="helpForm" method="POST" action="{{ url_for('volunteer_map') }}">
+        <input type="hidden" name="request_id" id="request_id" />
+        <label for="lat">Latitude:</label><br />
+        <input type="text" name="lat" id="lat" required pattern="^-?\d+(\.\d+)?$" /><br />
+        <label for="lng">Longitude:</label><br />
+        <input type="text" name="lng" id="lng" required pattern="^-?\d+(\.\d+)?$" /><br /><br />
+        <button type="submit">Submit</button>
+        <button type="button" id="closeModalBtn">Cancel</button>
+      </form>
+    </div>
+  </div>
+
+<script>
+  let map;
+  let selectedRequestId = null;
+  const openHelpBtn = document.getElementById('openHelpBtn');
+  const helpModal = document.getElementById('helpModal');
+  const closeModalBtn = document.getElementById('closeModalBtn');
+  const requestIdInput = document.getElementById('request_id');
+
+  function initMap() {
+    // Center map roughly (adjust as needed)
+    map = new google.maps.Map(document.getElementById("map"), {
+      zoom: 11,
+      center: { lat: 1.3521, lng: 103.8198 }, // Singapore lat/lng as example
+    });
+
+    fetch('{{ url_for("volunteer_requests_json") }}')
+      .then(response => response.json())
+      .then(data => {
+        data.forEach(request => {
+          if (request.lat && request.lng) {
+            const marker = new google.maps.Marker({
+              position: { lat: parseFloat(request.lat), lng: parseFloat(request.lng) },
+              map: map,
+              title: request.title,
+              icon: request.claimed_by ? 'http://maps.google.com/mapfiles/ms/icons/green-dot.png' : 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
+            });
+
+            marker.addListener('click', () => {
+              selectedRequestId = request.id;
+              openHelpBtn.disabled = !!request.claimed_by;
+              openHelpBtn.textContent = request.claimed_by ? 'Already Claimed' : 'Send Help for "' + request.title + '"';
+              requestIdInput.value = selectedRequestId;
+            });
+          }
+        });
+      });
+  }
+
+  openHelpBtn.addEventListener('click', () => {
+    if (selectedRequestId) {
+      helpModal.style.display = 'block';
+    }
+  });
+
+  closeModalBtn.addEventListener('click', () => {
+    helpModal.style.display = 'none';
+  });
+
+  // Close modal if clicked outside content
+  window.onclick = function(event) {
+    if (event.target === helpModal) {
+      helpModal.style.display = 'none';
+    }
+  }
+</script>
+
+<script async defer
+  src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initMap">
+</script>
+</body>
+</html>
