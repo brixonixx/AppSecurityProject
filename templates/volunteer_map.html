@@ -1,28 +1,63 @@
 {% extends "base.html" %}
 
-{% block title %}Volunteer Map Test{% endblock %}
+{% block title %}Volunteer Requests Map{% endblock %}
 
 {% block content %}
-<h1 class="mb-3">Volunteer Map (Test)</h1>
-<div id="map" style="height: 400px; width: 100%; border: 1px solid #ccc;"></div>
+<h1>Volunteer Requests Map</h1>
+
+<div id="map" style="height: 400px; width: 100%;"></div>
+
+<div class="mt-3">
+  <button id="openHelpBtn" class="btn btn-primary" disabled>Send Help</button>
+  <p id="locationStatus" class="text-muted small mt-2"></p>
+</div>
 {% endblock %}
 
 {% block scripts %}
   {{ super() }}
 
-  <!-- Leaflet CSS & JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      // Create the map centered on Singapore
       const map = L.map('map').setView([1.3521, 103.8198], 11);
+      const openHelpBtn = document.getElementById('openHelpBtn');
+      let selectedRequestId = null;
 
-      // Add OpenStreetMap tiles
+      // Add map tiles
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors'
       }).addTo(map);
+
+      // Fetch volunteer requests and add markers
+      fetch('{{ url_for("volunteer_requests_json") }}')
+        .then(response => response.json())
+        .then(data => {
+          data.forEach(request => {
+            if (request.lat && request.lng) {
+              const marker = L.marker([request.lat, request.lng], {
+                icon: L.icon({
+                  iconUrl: request.claimed_by
+                    ? 'https://maps.google.com/mapfiles/ms/icons/green-dot.png'
+                    : 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+                  iconSize: [25, 41],
+                  iconAnchor: [12, 41]
+                })
+              }).addTo(map);
+
+              marker.bindPopup(`<b>${request.title}</b><br>${request.description}`);
+
+              marker.on('click', () => {
+                selectedRequestId = request.id;
+                openHelpBtn.disabled = !!request.claimed_by;
+                openHelpBtn.textContent = request.claimed_by
+                  ? 'Already Claimed'
+                  : `Send Help for "${request.title}"`;
+              });
+            }
+          });
+        });
     });
   </script>
 {% endblock %}
