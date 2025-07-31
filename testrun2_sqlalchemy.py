@@ -217,60 +217,43 @@ def claim_volunteer_request(request_id):
 
 @app.route('/volunteer/map', methods=['GET', 'POST'])
 def volunteer_map():
-    if 'username' not in session:
-        flash("Login required", "warning")
-        return redirect(url_for('login'))
-
     if request.method == 'POST':
-        # Escape and validate input data
-        request_id = request.form.get('request_id', type=int)
-        lat = request.form.get('lat')
-        lng = request.form.get('lng')
+        # Get user location from form or JSON
+        lat = request.form.get('lat', type=float)
+        lng = request.form.get('lng', type=float)
+        # You may want to get username or anonymous user here
+        username = session.get('username', 'anonymous')
 
-        if request_id is None or lat is None or lng is None:
-            flash("Invalid input data.", "danger")
+        if lat is None or lng is None:
+            flash("Location required", "danger")
             return redirect(url_for('volunteer_map'))
 
-        try:
-            lat = float(lat)
-            lng = float(lng)
-        except ValueError:
-            flash("Invalid latitude or longitude.", "danger")
-            return redirect(url_for('volunteer_map'))
-
-        vr = VolunteerRequest.query.get(request_id)
-        if not vr:
-            flash("Volunteer request not found.", "danger")
-            return redirect(url_for('volunteer_map'))
-
-        if vr.claimed_by:
-            flash("This request has already been claimed.", "warning")
-            return redirect(url_for('volunteer_map'))
-
-        # Claim the request for current user
-        vr.claimed_by = session['username']
-        # Optionally, store volunteer location if needed, e.g.
-        # vr.helper_lat = lat
-        # vr.helper_lng = lng
+        # Create new volunteer request with location
+        vr = VolunteerRequest(title="Help Request", description="User requested help", requester=username, latitude=lat, longitude=lng)
+        db.session.add(vr)
         db.session.commit()
-        flash("You have successfully claimed this volunteer request!", "success")
+        flash("Help request sent!", "success")
         return redirect(url_for('volunteer_map'))
 
-    # On GET render the page; data for markers is fetched via AJAX
-    return render_template('volunteer_map.html', google_maps_api_key='YOUR_GOOGLE_MAPS_API_KEY')
+    # For GET, render page with requests
+    return render_template('volunteer_map.html')
 
 @app.route('/volunteer/requests_json')
 def volunteer_requests_json():
     requests = VolunteerRequest.query.all()
-    data = [{
-        'id': r.id,
-        'title': escape(r.title),
-        'description': escape(r.description),
-        'lat': r.lat,
-        'lng': r.lng,
-        'claimed_by': r.claimed_by
-    } for r in requests]
-    return jsonify(data)
+    result = []
+    for r in requests:
+        if r.latitude and r.longitude:
+            result.append({
+                "id": r.id,
+                "title": r.title,
+                "description": r.description,
+                "lat": r.latitude,
+                "lng": r.longitude,
+                "claimed_by": r.claimed_by
+            })
+    return jsonify(result)
+### ------------------ CALENDAR ROUTES ------------------- ###
 @app.route('/calendar')
 def calendar_page():
     return render_template('calendar.html')
