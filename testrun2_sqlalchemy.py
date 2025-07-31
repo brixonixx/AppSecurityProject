@@ -44,6 +44,9 @@ class VolunteerRequest(db.Model):
     description = db.Column(db.Text, nullable=False)
     requester = db.Column(db.String(80), nullable=False)
     claimed_by = db.Column(db.String(80), nullable=True)
+    latitude = db.Column(db.Float, nullable=True)
+    longitude = db.Column(db.Float, nullable=True)
+
 
 ### ------------------ CUSTOM FILTERS ------------------- ###
 
@@ -242,21 +245,45 @@ def volunteer_map():
     return render_template('volunteer_map.html')
 
 
+@app.route('/volunteer/delete/<int:request_id>', methods=['POST'])
+def delete_volunteer_request(request_id):
+    if 'username' not in session:
+        flash("Login required to delete your request", "warning")
+        return redirect(url_for('volunteer_map'))
+
+    vr = VolunteerRequest.query.get(request_id)
+    if not vr:
+        flash("Request not found", "danger")
+        return redirect(url_for('volunteer_map'))
+
+    # Only allow the original requester to delete their own request
+    if vr.requester != session['username']:
+        flash("You are not authorized to delete this request", "danger")
+        return redirect(url_for('volunteer_map'))
+
+    db.session.delete(vr)
+    db.session.commit()
+
+    flash("Your help request has been deleted!", "success")
+    return redirect(url_for('volunteer_map'))
+
 @app.route('/volunteer/requests_json')
 def volunteer_requests_json():
+    current_user = session.get('username')
     requests = VolunteerRequest.query.all()
     result = []
     for r in requests:
-        if r.latitude and r.longitude:
-            result.append({
-                "id": r.id,
-                "title": r.title,
-                "description": r.description,
-                "lat": r.latitude,
-                "lng": r.longitude,
-                "claimed_by": r.claimed_by
-            })
+        result.append({
+            "id": r.id,
+            "title": r.title,
+            "description": r.description,
+            "lat": r.latitude,
+            "lng": r.longitude,
+            "claimed_by": r.claimed_by,
+            "is_owner": (r.requester == current_user)
+        })
     return jsonify(result)
+
 ### ------------------ CALENDAR ROUTES ------------------- ###
 @app.route('/calendar')
 def calendar_page():

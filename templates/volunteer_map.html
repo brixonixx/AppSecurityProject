@@ -5,8 +5,10 @@
 {% block content %}
 <h1>Volunteer Map</h1>
 
+<!-- Map container -->
 <div id="map" style="height: 400px; width: 100%; border: 1px solid #ccc;"></div>
 
+<!-- Send Help button -->
 <div class="mt-3">
   <button id="sendHelpBtn" class="btn btn-primary">Send Help (Share Location)</button>
   <p id="status" class="text-muted mt-2"></p>
@@ -17,12 +19,12 @@
   <input type="hidden" name="lat" id="latInput" required>
   <input type="hidden" name="lng" id="lngInput" required>
 </form>
-
 {% endblock %}
 
 {% block scripts %}
   {{ super() }}
 
+  <!-- Leaflet CSS & JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
@@ -35,13 +37,26 @@
         attribution: '&copy; OpenStreetMap contributors'
       }).addTo(map);
 
-      // Load existing volunteer requests (markers)
+      // Load existing volunteer requests (pins)
       fetch('{{ url_for("volunteer_requests_json") }}')
-        .then(res => res.json())
+        .then(response => response.json())
         .then(data => {
-          data.forEach(r => {
-            L.marker([r.lat, r.lng]).addTo(map)
-              .bindPopup(`<b>${r.title}</b><br>${r.description}`);
+          data.forEach(request => {
+            if (request.lat && request.lng) {
+              const marker = L.marker([request.lat, request.lng]).addTo(map);
+
+              // Create popup content
+              let popupContent = `<b>${request.title}</b><br>${request.description}`;
+              if (request.is_owner) {
+                popupContent += `
+                  <br>
+                  <form method="POST" action="/volunteer/delete/${request.id}" onsubmit="return confirm('Delete this request?');">
+                    <button type="submit" class="btn btn-danger btn-sm mt-2">Delete</button>
+                  </form>`;
+              }
+
+              marker.bindPopup(popupContent);
+            }
           });
         });
 
@@ -51,6 +66,7 @@
       const lngInput = document.getElementById('lngInput');
       const helpForm = document.getElementById('helpForm');
 
+      // Handle Send Help button
       sendHelpBtn.addEventListener('click', () => {
         if (!navigator.geolocation) {
           status.textContent = "Geolocation is not supported by your browser.";
@@ -69,10 +85,10 @@
 
             status.textContent = `Location found: (${lat}, ${lng}). Sending help request...`;
 
-            // Submit form to server
+            // Submit form
             helpForm.submit();
           },
-          (err) => {
+          () => {
             status.textContent = "Unable to retrieve your location.";
           }
         );
