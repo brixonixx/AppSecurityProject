@@ -1,4 +1,4 @@
-# testrun2.py - With SQLAlchemy-based Forum and Volunteer Features + Comments
+# testrun2.py - Updated with correct database configuration
 
 from flask import Flask, render_template, request, session, redirect, url_for, flash, jsonify
 from markupsafe import escape
@@ -7,15 +7,13 @@ from wtforms import Form, StringField, TextAreaField, IntegerField, validators
 from datetime import datetime
 import uuid
 import os
+from sqlalchemy import text
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'
+app.secret_key = 'your-secret-key-here'  # Update this to match PDF
 
-# SQLAlchemy Config
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
-    'DATABASE_URL',
-    'mysql+pymysql://forumuser:forumpass@localhost:3306/forumdb'
-)
+# SQLAlchemy Config - Updated to match PDF requirements
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://flask_user:Silvers%40ge123@101.127.100.157:3306/flask_db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -51,7 +49,7 @@ class VolunteerRequest(db.Model):
     latitude = db.Column(db.Float, nullable=True)
     longitude = db.Column(db.Float, nullable=True)
 
-
+# Rest of your code remains the same...
 ### ------------------ CUSTOM FILTERS ------------------- ###
 
 @app.template_filter('nl2br')
@@ -189,7 +187,6 @@ def view_volunteers():
     requests = VolunteerRequest.query.all()
     return render_template('volunteer_map.html', requests=requests)
 
-
 @app.route('/volunteer/new', methods=['GET', 'POST'])
 def new_volunteer_request():
     if 'username' not in session:
@@ -247,7 +244,6 @@ def volunteer_map():
         return redirect(url_for('volunteer_map'))
 
     return render_template('volunteer_map.html')
-
 
 @app.route('/volunteer/delete/<int:request_id>', methods=['POST'])
 def delete_volunteer_request(request_id):
