@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Admin - Manage Volunteer Requests{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2>Admin Panel - Manage Volunteer Requests</h2>
+
+  <form method="POST" onsubmit="return confirm('Are you sure you want to delete ALL volunteer requests?');">
+    <button type="submit" class="btn btn-danger mb-3">Delete All Volunteer Requests</button>
+  </form>
+
+  {% if requests %}
+    {% for r in requests %}
+      <div class="card mb-2">
+        <div class="card-body">
+          <h5 class="card-title">{{ r.title }}</h5>
+          <p class="card-text">{{ r.description }}</p>
+          <small class="text-muted">Requested by {{ r.requester }}</small>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <p>No volunteer requests available.</p>
+  {% endif %}
+</div>
+{% endblock %}

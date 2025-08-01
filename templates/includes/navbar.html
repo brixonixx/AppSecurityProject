@@ -13,6 +13,16 @@
     </div>
 
     <!-- Profile Circle -->
+     {% if session.get('username') == 'admin' %}
+   <li class="nav-item dropdown">
+     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Admin</a>
+     <ul class="dropdown-menu">
+       <li><a class="dropdown-item" href="{{ url_for('admin_forum') }}">Manage Forum</a></li>
+       <li><a class="dropdown-item" href="{{ url_for('admin_volunteer') }}">Manage Volunteers</a></li>
+     </ul>
+   </li>
+    {% endif %}
+
     {% if session['username'] %}
     <a href="/profile" class="btn btn-light rounded-circle ml-3" style="width: 40px; height: 40px; font-weight: bold;">
       {{ session['username'][0]|upper }}

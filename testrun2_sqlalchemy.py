@@ -186,11 +186,59 @@ def nl2br_filter(text):
         return text
     return text.replace('\n', '<br>')
 
-### ------------------ DUMMY LOGIN ------------------- ###
-@app.before_request
-def dummy_login():
-    if 'username' not in session:
-        session['username'] = 'testuser'
+# ---------------- ADMIN SESSION SWITCH ---------------- #
+
+@app.route('/set_admin')
+def set_admin():
+    session['username'] = 'admin'
+    flash("You are now logged in as admin (development mode).", "info")
+    return redirect(url_for('index'))
+
+@app.route('/set_user')
+def set_user():
+    session['username'] = 'testuser'
+    flash("You are now logged in as normal user (development mode).", "info")
+    return redirect(url_for('index'))
+
+
+# ---------------- ADMIN ROUTES ---------------- #
+
+@app.route('/admin/forum', methods=['GET', 'POST'])
+def admin_forum():
+    # Ensure only admin can access
+    if session.get('username') != 'admin':
+        flash("Unauthorized access.", "danger")
+        return redirect(url_for('forum'))
+
+    if request.method == 'POST':
+        # Delete all forum posts
+        Comment.query.delete()
+        Post.query.delete()
+        db.session.commit()
+        flash("All posts have been deleted successfully!", "success")
+        return redirect(url_for('admin_forum'))
+
+    posts = Post.query.order_by(Post.created_at.desc()).all()
+    return render_template('admin_forum.html', posts=posts)
+
+
+@app.route('/admin/volunteer', methods=['GET', 'POST'])
+def admin_volunteer():
+    # Ensure only admin can access
+    if session.get('username') != 'admin':
+        flash("Unauthorized access.", "danger")
+        return redirect(url_for('view_volunteers'))
+
+    if request.method == 'POST':
+        # Delete all volunteer requests
+        VolunteerRequest.query.delete()
+        db.session.commit()
+        flash("All volunteer requests have been deleted successfully!", "success")
+        return redirect(url_for('admin_volunteer'))
+
+    requests_list = VolunteerRequest.query.all()
+    return render_template('admin_volunteer_map.html', requests=requests_list)
+
 
 ### ------------------ FORUM ROUTES ------------------- ###
 
