@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - SilverSage{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <h1>Admin Dashboard</h1>
+    
+    <!-- Statistics Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-content">
+                <h2>{{ total_users }}</h2>
+                <p>Total Users</p>
+            </div>
+        </div>
+        
+        <div class="stat-card success">
+            <div class="stat-icon">✅</div>
+            <div class="stat-content">
+                <h2>{{ active_users }}</h2>
+                <p>Active Users</p>
+            </div>
+        </div>
+        
+        <div class="stat-card info">
+            <div class="stat-icon">👨‍💼</div>
+            <div class="stat-content">
+                <h2>{{ admin_users }}</h2>
+                <p>Administrators</p>
+            </div>
+        </div>
+        
+        <div class="stat-card warning">
+            <div class="stat-icon">🔒</div>
+            <div class="stat-content">
+                <h2>{{ locked_users }}</h2>
+                <p>Locked Accounts</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+        <h2>Quick Actions</h2>
+        <div class="action-buttons">
+            <a href="{{ url_for('admin.user_list') }}" class="btn btn-primary">
+                <span>👥</span> Manage Users
+            </a>
+            <a href="{{ url_for('admin.create_user') }}" class="btn btn-success">
+                <span>➕</span> Create User
+            </a>
+            <a href="{{ url_for('admin.audit_logs') }}" class="btn btn-info">
+                <span>📋</span> View Audit Logs
+            </a>
+            <a href="{{ url_for('admin.export_users') }}" class="btn btn-secondary">
+                <span>📥</span> Export Users
+            </a>
+        </div>
+    </div>
+    
+    <!-- Recent Activity -->
+    <div class="recent-activity">
+        <h2>Recent Activity</h2>
+        <div class="activity-table">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>User</th>
+                        <th>Action</th>
+                        <th>IP Address</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in recent_logs %}
+                    <tr>
+                        <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            {% if log.user %}
+                                {{ log.user.username }}
+                            {% else %}
+                                Guest
+                            {% endif %}
+                        </td>
+                        <td>{{ log.action }}</td>
+                        <td>{{ log.ip_address }}</td>
+                        <td>
+                            {% if log.success %}
+                                <span class="badge badge-active">Success</span>
+                            {% else %}
+                                <span class="badge badge-inactive">Failed</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <a href="{{ url_for('admin.audit_logs') }}" class="view-all-link">View All Logs →</a>
+        </div>
+    </div>
+</div>
+
+<style>
+.admin-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    transition: transform 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.stat-card.success { border-left: 4px solid var(--success-color); }
+.stat-card.info { border-left: 4px solid var(--info-color); }
+.stat-card.warning { border-left: 4px solid var(--warning-color); }
+
+.stat-icon {
+    font-size: 40px;
+    margin-right: 20px;
+}
+
+.stat-content h2 {
+    font-size: 36px;
+    margin: 0;
+    color: var(--primary-color);
+}
+
+.stat-content p {
+    margin: 5px 0 0 0;
+    color: #666;
+    font-size: 18px;
+}
+
+.quick-actions {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    margin-bottom: 40px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.action-buttons {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+}
+
+.action-buttons .btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.action-buttons .btn span {
+    font-size: 20px;
+}
+
+.recent-activity {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.activity-table {
+    margin-top: 20px;
+}
+
+.view-all-link {
+    display: inline-block;
+    margin-top: 15px;
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.view-all-link:hover {
+    text-decoration: underline;
+}
+</style>
+{% endblock %}

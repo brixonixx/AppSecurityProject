@@ -1,0 +1,265 @@
+/* Base styles with larger fonts and better contrast for elderly users */
+:root {
+    --primary-color: #2c5282;
+    --secondary-color: #4299e1;
+    --success-color: #48bb78;
+    --danger-color: #f56565;
+    --warning-color: #ed8936;
+    --info-color: #4299e1;
+    --light-bg: #f7fafc;
+    --dark-text: #1a202c;
+    --border-color: #e2e8f0;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    font-size: 18px; /* Larger base font size */
+    line-height: 1.8;
+    color: var(--dark-text);
+    background-color: var(--light-bg);
+}
+
+/* High contrast and large clickable areas */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Navigation with large touch targets */
+.navbar {
+    background-color: var(--primary-color);
+    padding: 20px 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.navbar a {
+    color: white;
+    text-decoration: none;
+    padding: 15px 25px;
+    font-size: 20px;
+    font-weight: 500;
+    margin: 0 10px;
+    border-radius: 8px;
+    transition: background-color 0.3s;
+}
+
+.navbar a:hover, .navbar a:focus {
+    background-color: var(--secondary-color);
+    outline: 3px solid white;
+}
+
+/* Forms with large inputs */
+.form-container {
+    max-width: 500px;
+    margin: 40px auto;
+    background: white;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.form-group {
+    margin-bottom: 25px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: var(--dark-text);
+}
+
+.form-control {
+    width: 100%;
+    padding: 15px 20px;
+    font-size: 18px;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    transition: border-color 0.3s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
+}
+
+/* Large buttons */
+.btn {
+    display: inline-block;
+    padding: 15px 30px;
+    font-size: 20px;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+    min-width: 150px;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover, .btn-primary:focus {
+    background-color: var(--secondary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.btn-success {
+    background-color: var(--success-color);
+    color: white;
+}
+
+.btn-danger {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+/* Alert messages with icons */
+.alert {
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: 500;
+}
+
+.alert-success {
+    background-color: #c6f6d5;
+    color: #22543d;
+    border-left: 4px solid var(--success-color);
+}
+
+.alert-error {
+    background-color: #fed7d7;
+    color: #742a2a;
+    border-left: 4px solid var(--danger-color);
+}
+
+.alert-info {
+    background-color: #bee3f8;
+    color: #2a4365;
+    border-left: 4px solid var(--info-color);
+}
+
+/* Profile section */
+.profile-container {
+    background: white;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    margin-top: 30px;
+}
+
+.profile-picture {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid var(--border-color);
+    margin-bottom: 20px;
+}
+
+/* Tables for admin */
+.data-table {
+    width: 100%;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.data-table th,
+.data-table td {
+    padding: 15px 20px;
+    text-align: left;
+    font-size: 18px;
+}
+
+.data-table th {
+    background-color: var(--primary-color);
+    color: white;
+    font-weight: 600;
+}
+
+.data-table tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+.data-table tr:hover {
+    background-color: #e9ecef;
+}
+
+/* Status badges */
+.badge {
+    display: inline-block;
+    padding: 5px 15px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 20px;
+}
+
+.badge-active {
+    background-color: var(--success-color);
+    color: white;
+}
+
+.badge-inactive {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .form-container {
+        padding: 30px 20px;
+    }
+    
+    .navbar a {
+        display: block;
+        margin: 5px 0;
+    }
+    
+    .data-table {
+        font-size: 16px;
+    }
+}
+
+/* Accessibility improvements */
+a:focus,
+button:focus,
+input:focus,
+select:focus,
+textarea:focus {
+    outline: 3px solid var(--secondary-color);
+    outline-offset: 2px;
+}
+
+/* Loading spinner */
+.spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid var(--primary-color);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

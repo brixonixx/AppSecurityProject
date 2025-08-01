@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Create User - Admin - SilverSage{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h1 style="text-align: center; margin-bottom: 30px; color: var(--primary-color);">
+        Create New User
+    </h1>
+    
+    <form method="POST" action="">
+        {{ form.hidden_tag() }}
+        
+        <div class="form-group">
+            {{ form.username.label }}
+            {{ form.username(class="form-control", placeholder="Choose a username") }}
+            {% for error in form.username.errors %}
+                <span style="color: var(--danger-color); font-size: 16px;">{{ error }}</span>
+            {% endfor %}
+        </div>
+        
+        <div class="form-group">
+            {{ form.email.label }}
+            {{ form.email(class="form-control", placeholder="Enter email address") }}
+            {% for error in form.email.errors %}
+                <span style="color: var(--danger-color); font-size: 16px;">{{ error }}</span>
+            {% endfor %}
+        </div>
+        
+        <div class="form-group">
+            {{ form.password.label }}
+            {{ form.password(class="form-control", placeholder="Create a strong password") }}
+            {% for error in form.password.errors %}
+                <span style="color: var(--danger-color); font-size: 16px;">{{ error }}</span>
+            {% endfor %}
+            <small style="color: #666;">
+                Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.
+            </small>
+        </div>
+        
+        <div class="form-group">
+            {{ form.confirm_password.label }}
+            {{ form.confirm_password(class="form-control", placeholder="Confirm password") }}
+            {% for error in form.confirm_password.errors %}
+                <span style="color: var(--danger-color); font-size: 16px;">{{ error }}</span>
+            {% endfor %}
+        </div>
+        
+        <div class="form-group">
+            <label style="font-size: 20px;">
+                {{ form.is_admin() }} Grant Administrator Privileges
+            </label>
+            <small style="color: #666; display: block; margin-top: 5px;">
+                Administrators can manage other users and access system settings.
+            </small>
+        </div>
+        
+        <div class="form-group">
+            {{ form.submit(class="btn btn-primary", style="width: 100%;", value="Create User") }}
+        </div>
+        
+        <p style="text-align: center; margin-top: 20px;">
+            <a href="{{ url_for('admin.user_list') }}" style="color: var(--secondary-color);">
+                ← Back to User List
+            </a>
+        </p>
+    </form>
+</div>
+{% endblock %}
