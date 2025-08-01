@@ -4,7 +4,7 @@ def test_connection():
     try:
         # Establish a connection to the database
         connection = mysql.connector.connect(
-            host='101.127.100.157',
+            host='ivp-silversage.duckdns.org',
             port=3306,
             user='flask_user',
             password='Silvers@ge123',
