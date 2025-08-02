@@ -157,8 +157,11 @@ class VolunteerRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=False)
-    requester = db.Column(db.String(80), nullable=False)
-    claimed_by = db.Column(db.String(80), nullable=True)
+    requester = db.Column(db.String(50), nullable=False)
+    claimed_by = db.Column(db.String(50), nullable=True)
+    latitude = db.Column(db.Float, nullable=True)      # ✅ Add this
+    longitude = db.Column(db.Float, nullable=True)     # ✅ Add this
+
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -298,13 +301,16 @@ def delete_comment(comment_id):
 
 ### ------------------ VOLUNTEER ROUTES ------------------- ###
 
-# User Help Request Page (Normal users send help requests)
 @app.route('/volunteer', methods=['GET', 'POST'])
-@rate_limit(limit=3, window=300, per='user')  # 3 help requests per 5 min per user
+@rate_limit(limit=3, window=300, per='user')
 def volunteer():
     if 'username' not in session:
         flash("Login required", "warning")
         return redirect(url_for('login'))
+
+    # Force testuser to be a volunteer
+    if session.get('username') == 'testuser':
+        session['is_volunteer'] = True
 
     if request.method == 'POST':
         lat = request.form.get('lat', type=float)
@@ -330,31 +336,45 @@ def volunteer():
     return render_template('volunteer.html')
 
 
-# Volunteer Map Page (Only visible to registered volunteers)
 @app.route('/volunteer/map')
-@rate_limit(limit=5, window=300, per='ip')  # 5 map requests per 5 min per IP
+@rate_limit(limit=5, window=300, per='ip')
 def volunteer_map():
     if 'username' not in session:
         flash("Login required", "warning")
         return redirect(url_for('login'))
 
+    # Force testuser to be volunteer
+    if session.get('username') == 'testuser':
+        session['is_volunteer'] = True
+
     user = User.query.filter_by(username=session['username']).first()
-    if not user or not user.is_volunteer:
-        flash("You must be a registered volunteer to view this page", "danger")
-        return redirect(url_for('volunteer'))
+    if not user:
+        flash("User not found. Please log in again.", "danger")
+        return redirect(url_for('login'))
 
-    return render_template('volunteer_map.html')
+    # Override is_volunteer if it's testuser
+    if session.get('is_volunteer') or user.is_volunteer:
+        return render_template('volunteer_map.html')
+
+    flash("You must be a registered volunteer to view this page", "danger")
+    return redirect(url_for('volunteer'))
 
 
-# Volunteer "Go To" (Volunteers accept and remove help requests)
 @app.route('/volunteer/go/<int:request_id>', methods=['DELETE'])
-@rate_limit(limit=10, window=60, per='user')  # 10 actions per min per volunteer
+@rate_limit(limit=10, window=60, per='user')
 def volunteer_go_to_request(request_id):
     if 'username' not in session:
         return jsonify({"success": False, "error": "Login required"}), 403
 
+    # Force testuser to volunteer
+    if session.get('username') == 'testuser':
+        session['is_volunteer'] = True
+
     user = User.query.filter_by(username=session['username']).first()
-    if not user or not user.is_volunteer:
+    if not user and not session.get('is_volunteer'):
+        return jsonify({"success": False, "error": "User not found"}), 403
+
+    if not session.get('is_volunteer') and not (user and user.is_volunteer):
         return jsonify({"success": False, "error": "Only volunteers can do this"}), 403
 
     vr = VolunteerRequest.query.get(request_id)
@@ -363,18 +383,25 @@ def volunteer_go_to_request(request_id):
 
     db.session.delete(vr)
     db.session.commit()
-
     return jsonify({"success": True, "message": "Help request accepted and removed"})
 
 
-# Volunteer Registration Page
 @app.route('/volunteer/register', methods=['GET', 'POST'])
 def register_volunteer():
     if 'username' not in session:
         flash("Login required to register as a volunteer", "warning")
         return redirect(url_for('login'))
 
+    # Force testuser to volunteer
+    if session.get('username') == 'testuser':
+        session['is_volunteer'] = True
+        flash("Testuser is automatically a volunteer!", "info")
+        return redirect(url_for('volunteer_map'))
+
     user = User.query.filter_by(username=session['username']).first()
+    if not user:
+        flash("User not found. Please log in again.", "danger")
+        return redirect(url_for('login'))
 
     if request.method == 'POST':
         user.is_volunteer = True
@@ -385,13 +412,18 @@ def register_volunteer():
     return render_template('register_volunteer.html', user=user)
 
 
-# Volunteer Requests JSON API
 @app.route('/volunteer/requests_json')
-@rate_limit(limit=30, window=60, per='ip')  # 30 API calls per min per IP
+@rate_limit(limit=30, window=60, per='ip')
 def volunteer_requests_json():
     current_user = session.get('username')
-    user = User.query.filter_by(username=current_user).first() if current_user else None
-    is_volunteer = user.is_volunteer if user else False
+
+    # Force testuser to volunteer
+    is_volunteer = False
+    if current_user == 'testuser':
+        is_volunteer = True
+    else:
+        user = User.query.filter_by(username=current_user).first() if current_user else None
+        is_volunteer = user.is_volunteer if user else False
 
     requests = VolunteerRequest.query.all()
     result = []
@@ -404,7 +436,7 @@ def volunteer_requests_json():
             "lng": r.longitude,
             "claimed_by": r.claimed_by,
             "is_owner": (r.requester == current_user),
-            "can_go": is_volunteer  # Only volunteers see the "Go To" button
+            "can_go": is_volunteer
         })
     return jsonify(result)
 
