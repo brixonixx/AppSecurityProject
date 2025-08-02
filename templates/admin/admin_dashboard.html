@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - SilverSage{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <h1>Admin Dashboard</h1>
+    
+    <!-- Statistics Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-content">
+                <h2>{{ total_users }}</h2>
+                <p>Total Users</p>
+            </div>
+        </div>
+        
+        <div class="stat-card success">
+            <div class="stat-icon">✅</div>
+            <div class="stat-content">
+                <h2>{{ active_users }}</h2>
+                <p>Active Users</p>
+            </div>
+        </div>
+        
+        <div class="stat-card info">
+            <div class="stat-icon">👨‍💼</div>
+            <div class="stat-content">
+                <h2>{{ admin_users }}</h2>
+                <p>Administrators</p>
+            </div>
+        </div>
+        
+        <div class="stat-card warning">
+            <div class="stat-icon">🔒</div>
+            <div class="stat-content">
+                <h2>{{ locked_users }}</h2>
+                <p>Locked Accounts</p>
+            </div>
+        </div>
+        
+        <!-- Volunteer Statistics - only show if available -->
+        {% if total_volunteers is defined and total_volunteers >= 0 %}
+        <div class="stat-card volunteer">
+            <div class="stat-icon">🤝</div>
+            <div class="stat-content">
+                <h2>{{ total_volunteers }}</h2>
+                <p>Total Volunteers</p>
+            </div>
+        </div>
+        
+        <div class="stat-card volunteer-pending">
+            <div class="stat-icon">⏳</div>
+            <div class="stat-content">
+                <h2>{{ pending_volunteers }}</h2>
+                <p>Pending Approval</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- User Management Section -->
+    <div class="quick-actions">
+        <h2>User Management</h2>
+        <div class="action-buttons">
+            <a href="{{ url_for('admin.user_list') }}" class="btn btn-primary">
+                <span>👥</span> Manage Users
+            </a>
+            <a href="{{ url_for('admin.create_user') }}" class="btn btn-success">
+                <span>➕</span> Create User
+            </a>
+            {% if total_volunteers is defined %}
+            <a href="{{ url_for('admin.volunteer_management') }}" class="btn btn-info">
+                <span>🤝</span> Manage Volunteers
+            </a>
+            {% else %}
+            <span class="btn-disabled" title="Run database migration to enable volunteer features">
+                <span>🤝</span> Manage Volunteers (Migration Required)
+            </span>
+            {% endif %}
+            <a href="{{ url_for('admin.audit_logs') }}" class="btn btn-secondary">
+                <span>📋</span> View Audit Logs
+            </a>
+            <a href="{{ url_for('admin.export_users') }}" class="btn btn-warning">
+                <span>📥</span> Export Users
+            </a>
+        </div>
+    </div>
+    
+    <!-- Content Management Section -->
+    <div class="quick-actions">
+        <h2>Content Management</h2>
+        <div class="action-buttons">
+            <a href="{{ url_for('admin.event_management') }}" class="btn btn-primary">
+                <span>📅</span> Event Management
+            </a>
+            <a href="{{ url_for('admin.feedback_management') }}" class="btn btn-info">
+                <span>💬</span> Feedback Management
+            </a>
+            <a href="{{ url_for('admin.forum_management') }}" class="btn btn-secondary">
+                <span>🗣️</span> Forum Management
+            </a>
+            <a href="{{ url_for('admin.faq_management') }}" class="btn btn-warning">
+                <span>❓</span> FAQ Management
+            </a>
+        </div>
+    </div>
+    
+    <!-- Recent Activity -->
+    <div class="recent-activity">
+        <h2>Recent Activity</h2>
+        <div class="activity-table">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>User</th>
+                        <th>Action</th>
+                        <th>IP Address</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in recent_logs %}
+                    <tr>
+                        <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            {% if log.user %}
+                                {{ log.user.username }}
+                                {% if log.user.is_volunteer is defined and log.user.is_volunteer %}
+                                    <span class="mini-badge volunteer">V</span>
+                                {% endif %}
+                                {% if log.user.is_admin %}
+                                    <span class="mini-badge admin">A</span>
+                                {% endif %}
+                            {% else %}
+                                Guest
+                            {% endif %}
+                        </td>
+                        <td>{{ log.action }}</td>
+                        <td>{{ log.ip_address }}</td>
+                        <td>
+                            {% if log.success %}
+                                <span class="badge badge-active">Success</span>
+                            {% else %}
+                                <span class="badge badge-inactive">Failed</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <a href="{{ url_for('admin.audit_logs') }}" class="view-all-link">View All Logs →</a>
+        </div>
+    </div>
+    
+    <!-- Volunteer Alerts - only show if volunteer features are available -->
+    {% if pending_volunteers is defined and pending_volunteers > 0 %}
+    <div class="alert-section">
+        <div class="alert alert-warning">
+            <strong>🤝 Volunteer Applications Pending!</strong> 
+            You have {{ pending_volunteers }} volunteer application(s) waiting for approval.
+            <a href="{{ url_for('admin.volunteer_management', filter='pending') }}" class="btn btn-small btn-primary">
+                Review Applications
+            </a>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Migration Notice -->
+    {% if total_volunteers is not defined or total_volunteers < 0 %}
+    <div class="alert-section">
+        <div class="alert alert-info">
+            <strong>📊 Volunteer Features Available!</strong> 
+            Run the database migration to enable volunteer management features.
+            <code>python migrate_volunteer_columns.py</code>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

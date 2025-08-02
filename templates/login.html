@@ -4,9 +4,8 @@
 
 {% block content %}
 <div class="form-container">
-    <h1 style="text-align: center; margin-bottom: 30px; color: var(--primary-color);">
-        Welcome to SilverSage
-    </h1>
+    <h1>Welcome Back to SilverSage</h1>
+    <p class="form-subtitle">Please sign in to your account</p>
     
     <form method="POST" action="">
         {{ form.hidden_tag() }}
@@ -15,32 +14,41 @@
             {{ form.email.label }}
             {{ form.email(class="form-control", placeholder="Enter your email") }}
             {% for error in form.email.errors %}
-                <span style="color: var(--danger-color); font-size: 16px;">{{ error }}</span>
+                <span class="error-text">{{ error }}</span>
             {% endfor %}
         </div>
         
         <div class="form-group">
             {{ form.password.label }}
-            {{ form.password(class="form-control", placeholder="Enter your password") }}
+            <div class="password-input-wrapper">
+                {{ form.password(class="form-control password-field", placeholder="Enter your password", id="login_password") }}
+                <button type="button" class="password-toggle" aria-label="Show password" title="Show password">
+                    <img src="/static/uploads/eye.png" alt="Show password" width="20" height="20">
+                </button>
+            </div>
             {% for error in form.password.errors %}
-                <span style="color: var(--danger-color); font-size: 16px;">{{ error }}</span>
+                <span class="error-text">{{ error }}</span>
             {% endfor %}
         </div>
         
-        <div class="form-group">
+        <div class="form-group checkbox-group">
             {{ form.remember_me() }} {{ form.remember_me.label }}
         </div>
         
         <div class="form-group">
-            {{ form.submit(class="btn btn-primary", style="width: 100%;") }}
+            {{ form.submit(class="btn btn-primary form-submit-btn") }}
         </div>
         
-        <p style="text-align: center; margin-top: 20px;">
+        <p class="form-footer">
             Don't have an account? 
-            <a href="{{ url_for('auth.register') }}" style="color: var(--secondary-color);">
-                Register here
-            </a>
+            <a href="{{ url_for('auth.register') }}">Register here</a>
         </p>
     </form>
+    
+    <div class="back-to-home">
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">
+            ← Back to Home
+        </a>
+    </div>
 </div>
 {% endblock %}

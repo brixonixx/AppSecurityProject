@@ -57,10 +57,21 @@ def create_app():
     # Routes
     @app.route('/')
     def index():
+        """Landing page - show to all visitors first"""
         if current_user.is_authenticated:
+            # If user is already logged in, show a personalized version or redirect
             return redirect(url_for('dashboard'))
-        return redirect(url_for('auth.login'))
+        else:
+            # Show the landing page to introduce SilverSage
+            return render_template('landing.html')
     
+    @app.route('/home')
+    def home():
+        """Home page for authenticated users"""
+        if not current_user.is_authenticated:
+            return redirect(url_for('index'))
+        return render_template('home.html')
+
     @app.route('/test-db')
     def test_db():
         """Test database connection and show useful info"""
@@ -144,6 +155,12 @@ def create_app():
             return redirect(url_for('admin.admin_dashboard'))
         return render_template('dashboard.html')
     
+    @app.route('/settings')
+    @login_required
+    def general_settings():
+        """General settings placeholder"""
+        return render_template('settings.html')
+    
     @app.errorhandler(404)
     def not_found_error(error):
         return render_template('error.html', error_code=404, 
@@ -219,8 +236,8 @@ if __name__ == '__main__':
     print(f"📍 Host: {app.config.get('MYSQL_HOST')}")
     print(f"📍 User: {app.config.get('MYSQL_USER')}")
     print("="*50)
-    print("\n✅ Visit http://localhost:5000/test-db to test database connection")
-    print("✅ Visit http://localhost:5000 to access the application")
+    print("\n✅ Visit http://localhost:5000 to see the SilverSage landing page")
+    print("✅ Visit http://localhost:5000/test-db to test database connection")
     print("✅ Admin login: admin@silversage.com / Admin@123\n")
     
     app.run(host='0.0.0.0', port=5000, debug=True)

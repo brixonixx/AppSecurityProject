@@ -21,6 +21,16 @@ class User(UserMixin, db.Model):
     profile_picture = db.Column(db.String(200), default='default.png')
     is_admin = db.Column(db.Boolean, default=False)
     is_active = db.Column(db.Boolean, default=True)
+    is_volunteer = db.Column(db.Boolean, default=False)  # NEW: Volunteer role
+    
+    # Volunteer-specific fields (optional - your teammate can use these)
+    volunteer_approved = db.Column(db.Boolean, default=False)  # Admin approval required
+    volunteer_approved_at = db.Column(db.DateTime)  # When volunteer was approved
+    volunteer_approved_by = db.Column(db.Integer, db.ForeignKey('users.id'))  # Which admin approved
+    volunteer_bio = db.Column(db.Text)  # Volunteer description/bio
+    volunteer_skills = db.Column(db.Text)  # Skills or areas of expertise
+    volunteer_availability = db.Column(db.String(200))  # Availability schedule
+    volunteer_applied_at = db.Column(db.DateTime)  # When they applied to be volunteer
     
     # Security features
     failed_login_attempts = db.Column(db.Integer, default=0)
@@ -35,6 +45,12 @@ class User(UserMixin, db.Model):
     
     # Password history to prevent reuse
     password_history = db.relationship('PasswordHistory', backref='user', lazy='dynamic')
+    
+    # Relationship for volunteer approvals
+    approved_volunteers = db.relationship('User', 
+                                        foreign_keys=[volunteer_approved_by],
+                                        remote_side=[id],
+                                        backref='volunteer_approver')
     
     def set_password(self, password):
         """Enhanced password hashing with SHA-256 and salt"""
@@ -114,6 +130,50 @@ class User(UserMixin, db.Model):
         
         return False  # Password is new
     
+    def apply_as_volunteer(self, bio=None, skills=None, availability=None):
+        """Apply to become a volunteer"""
+        self.is_volunteer = True
+        self.volunteer_approved = False  # Requires admin approval
+        self.volunteer_applied_at = datetime.utcnow()
+        self.volunteer_bio = bio
+        self.volunteer_skills = skills
+        self.volunteer_availability = availability
+    
+    def approve_volunteer(self, approved_by_admin_id):
+        """Approve volunteer application (admin only)"""
+        self.volunteer_approved = True
+        self.volunteer_approved_at = datetime.utcnow()
+        self.volunteer_approved_by = approved_by_admin_id
+    
+    def revoke_volunteer(self):
+        """Revoke volunteer status"""
+        self.is_volunteer = False
+        self.volunteer_approved = False
+        self.volunteer_approved_at = None
+        self.volunteer_approved_by = None
+    
+    @property
+    def volunteer_status(self):
+        """Get volunteer status as string"""
+        if not self.is_volunteer:
+            return "Not a volunteer"
+        elif self.volunteer_approved:
+            return "Approved volunteer"
+        else:
+            return "Pending approval"
+    
+    @property
+    def full_name(self):
+        """Get user's full name"""
+        if self.first_name and self.last_name:
+            return f"{self.first_name} {self.last_name}"
+        elif self.first_name:
+            return self.first_name
+        elif self.last_name:
+            return self.last_name
+        else:
+            return self.username
+    
     def generate_reset_token(self):
         """Generate a secure password reset token"""
         self.password_reset_token = secrets.token_urlsafe(32)
@@ -157,3 +217,36 @@ class AuditLog(db.Model):
     
     # Relationship to User
     user = db.relationship('User', backref='audit_logs')
+
+# Optional: Volunteer Events/Activities table for your teammate
+class VolunteerEvent(db.Model):
+    """Track volunteer events and activities"""
+    __tablename__ = 'volunteer_events'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    event_date = db.Column(db.DateTime, nullable=False)
+    location = db.Column(db.String(200))
+    max_volunteers = db.Column(db.Integer, default=10)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_active = db.Column(db.Boolean, default=True)
+    
+    # Relationship
+    creator = db.relationship('User', backref='created_events')
+
+class VolunteerRegistration(db.Model):
+    """Track volunteer registrations for events"""
+    __tablename__ = 'volunteer_registrations'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    event_id = db.Column(db.Integer, db.ForeignKey('volunteer_events.id'), nullable=False)
+    registered_at = db.Column(db.DateTime, default=datetime.utcnow)
+    status = db.Column(db.String(20), default='registered')  # registered, confirmed, completed, cancelled
+    notes = db.Column(db.Text)
+    
+    # Relationships
+    volunteer = db.relationship('User', backref='volunteer_registrations')
+    event = db.relationship('VolunteerEvent', backref='registrations')

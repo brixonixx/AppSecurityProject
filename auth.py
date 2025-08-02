@@ -32,7 +32,7 @@ def save_profile_picture(form_picture):
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('home'))
     
     form = LoginForm()
     if form.validate_on_submit():
@@ -46,7 +46,7 @@ def login():
             login_user(user, remember=form.remember_me.data)
             log_security_event(f'User login: {user.username}')
             next_page = request.args.get('next')
-            return redirect(next_page) if next_page else redirect(url_for('dashboard'))
+            return redirect(next_page) if next_page else redirect(url_for('home'))
         else:
             flash('Invalid email or password. Please try again.', 'error')
             log_security_event(f'Failed login attempt for email: {form.email.data}', success=False)
@@ -56,7 +56,7 @@ def login():
 @auth.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('home'))
     
     form = RegistrationForm()
     if form.validate_on_submit():
