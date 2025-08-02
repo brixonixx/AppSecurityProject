@@ -1,4 +1,4 @@
-# testrun2.py - Updated with correct database configuration and Rate Limiting
+# testrun2.py - Combined Flask Application with All Features
 
 from flask import Flask, render_template, request, session, redirect, url_for, flash, jsonify
 from markupsafe import escape
@@ -13,7 +13,7 @@ from collections import defaultdict
 import time
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here'  # Update this to match PDF
+app.secret_key = 'your-secret-key-here'
 
 # SQLAlchemy Config - Updated to match PDF requirements
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://flask_user:Silvers%40ge123@ivp-silversage.duckdns.org:3306/flask_db'
@@ -138,13 +138,15 @@ class User(db.Model):
     password = db.Column(db.String(120), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_volunteer = db.Column(db.Boolean, default=False)  # Enhanced volunteer field
 
     def to_dict(self):
         return {
             'id': self.id,
             'username': self.username,
             'email': self.email,
-            'created_at': self.created_at.isoformat()
+            'created_at': self.created_at.isoformat(),
+            'is_volunteer': self.is_volunteer
         }
 
 class Post(db.Model):
@@ -186,6 +188,13 @@ def nl2br_filter(text):
         return text
     return text.replace('\n', '<br>')
 
+### ------------------ AUTO LOGIN ------------------- ###
+
+@app.before_request
+def dummy_login():
+    if 'username' not in session:
+        session['username'] = 'testuser'
+
 # ---------------- ADMIN SESSION SWITCH ---------------- #
 
 @app.route('/set_admin')
@@ -199,7 +208,6 @@ def set_user():
     session['username'] = 'testuser'
     flash("You are now logged in as normal user (development mode).", "info")
     return redirect(url_for('index'))
-
 
 # ---------------- ADMIN ROUTES ---------------- #
 
@@ -221,7 +229,6 @@ def admin_forum():
     posts = Post.query.order_by(Post.created_at.desc()).all()
     return render_template('admin_forum.html', posts=posts)
 
-
 @app.route('/admin/volunteer', methods=['GET', 'POST'])
 def admin_volunteer():
     # Ensure only admin can access
@@ -238,7 +245,6 @@ def admin_volunteer():
 
     requests_list = VolunteerRequest.query.all()
     return render_template('admin_volunteer_map.html', requests=requests_list)
-
 
 ### ------------------ FORUM ROUTES ------------------- ###
 
@@ -360,15 +366,118 @@ def delete_comment(comment_id):
     flash("Comment deleted successfully!", "success")
     return redirect(url_for('view_post', post_id=post_id))
 
-### ------------------ VOLUNTEER ROUTES ------------------- ###
+### ------------------ ENHANCED VOLUNTEER ROUTES ------------------- ###
 
-@app.route('/volunteer')
-def view_volunteers():
-    requests = VolunteerRequest.query.all()
-    return render_template('volunteer_map.html', requests=requests)
+@app.route('/volunteer', methods=['GET', 'POST'])
+@rate_limit(limit=3, window=300, per='user')
+def volunteer():
+    if 'username' not in session:
+        flash("Login required", "warning")
+        return redirect(url_for('login'))
 
+    # Force testuser to be a volunteer
+    if session.get('username') == 'testuser':
+        session['is_volunteer'] = True
+
+    if request.method == 'POST':
+        lat = request.form.get('lat', type=float)
+        lng = request.form.get('lng', type=float)
+        username = session['username']
+
+        if lat is None or lng is None:
+            flash("Location required", "danger")
+            return redirect(url_for('volunteer'))
+
+        vr = VolunteerRequest(
+            title="Help Request",
+            description="User requested help",
+            requester=username,
+            latitude=lat,
+            longitude=lng
+        )
+        db.session.add(vr)
+        db.session.commit()
+        flash("Help request sent!", "success")
+        return redirect(url_for('volunteer'))
+
+    return render_template('volunteer.html')
+
+@app.route('/volunteer/map')
+@rate_limit(limit=5, window=300, per='ip')
+def volunteer_map():
+    if 'username' not in session:
+        flash("Login required", "warning")
+        return redirect(url_for('login'))
+
+    # Force testuser to be volunteer
+    if session.get('username') == 'testuser':
+        session['is_volunteer'] = True
+
+    user = User.query.filter_by(username=session['username']).first()
+    if not user:
+        flash("User not found. Please log in again.", "danger")
+        return redirect(url_for('login'))
+
+    # Override is_volunteer if it's testuser
+    if session.get('is_volunteer') or user.is_volunteer:
+        return render_template('volunteer_map.html')
+
+    flash("You must be a registered volunteer to view this page", "danger")
+    return redirect(url_for('volunteer'))
+
+@app.route('/volunteer/go/<int:request_id>', methods=['DELETE'])
+@rate_limit(limit=10, window=60, per='user')
+def volunteer_go_to_request(request_id):
+    if 'username' not in session:
+        return jsonify({"success": False, "error": "Login required"}), 403
+
+    # Force testuser to volunteer
+    if session.get('username') == 'testuser':
+        session['is_volunteer'] = True
+
+    user = User.query.filter_by(username=session['username']).first()
+    if not user and not session.get('is_volunteer'):
+        return jsonify({"success": False, "error": "User not found"}), 403
+
+    if not session.get('is_volunteer') and not (user and user.is_volunteer):
+        return jsonify({"success": False, "error": "Only volunteers can do this"}), 403
+
+    vr = VolunteerRequest.query.get(request_id)
+    if not vr:
+        return jsonify({"success": False, "error": "Request not found"}), 404
+
+    db.session.delete(vr)
+    db.session.commit()
+    return jsonify({"success": True, "message": "Help request accepted and removed"})
+
+@app.route('/volunteer/register', methods=['GET', 'POST'])
+def register_volunteer():
+    if 'username' not in session:
+        flash("Login required to register as a volunteer", "warning")
+        return redirect(url_for('login'))
+
+    # Force testuser to volunteer
+    if session.get('username') == 'testuser':
+        session['is_volunteer'] = True
+        flash("Testuser is automatically a volunteer!", "info")
+        return redirect(url_for('volunteer_map'))
+
+    user = User.query.filter_by(username=session['username']).first()
+    if not user:
+        flash("User not found. Please log in again.", "danger")
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        user.is_volunteer = True
+        db.session.commit()
+        flash("You are now registered as a volunteer!", "success")
+        return redirect(url_for('volunteer_map'))
+
+    return render_template('register_volunteer.html', user=user)
+
+# Legacy route compatibility
 @app.route('/volunteer/new', methods=['GET', 'POST'])
-@rate_limit(limit=3, window=300, per='user')  # 3 volunteer requests per 5 minutes per user
+@rate_limit(limit=3, window=300, per='user')
 def new_volunteer_request():
     if 'username' not in session:
         flash("Login required", "warning")
@@ -387,7 +496,7 @@ def new_volunteer_request():
     return render_template('new_volunteer.html')
 
 @app.route('/volunteer/claim/<int:request_id>')
-@rate_limit(limit=10, window=60, per='user')  # 10 claims per minute per user
+@rate_limit(limit=10, window=60, per='user')
 def claim_volunteer_request(request_id):
     if 'username' not in session:
         flash("Login required", "warning")
@@ -401,35 +510,13 @@ def claim_volunteer_request(request_id):
 
     return redirect(url_for('view_volunteers'))
 
-@app.route('/volunteer/map', methods=['GET', 'POST'])
-@rate_limit(limit=5, window=300, per='ip')  # 5 map requests per 5 minutes per IP
-def volunteer_map():
-    if request.method == 'POST':
-        lat = request.form.get('lat', type=float)
-        lng = request.form.get('lng', type=float)
-        username = session.get('username', 'anonymous')
-
-        if lat is None or lng is None:
-            flash("Location required", "danger")
-            return redirect(url_for('volunteer_map'))
-
-        vr = VolunteerRequest(
-            title="Help Request",
-            description="User requested help",
-            requester=username,
-            latitude=lat,
-            longitude=lng
-        )
-        db.session.add(vr)
-        db.session.commit()
-
-        flash("Help request sent!", "success")
-        return redirect(url_for('volunteer_map'))
-
-    return render_template('volunteer_map.html')
+# Legacy route compatibility
+def view_volunteers():
+    requests = VolunteerRequest.query.all()
+    return render_template('volunteer_map.html', requests=requests)
 
 @app.route('/volunteer/delete/<int:request_id>', methods=['POST'])
-@rate_limit(limit=3, window=60, per='user')  # 3 deletions per minute per user
+@rate_limit(limit=3, window=60, per='user')
 def delete_volunteer_request(request_id):
     if 'username' not in session:
         flash("Login required to delete your request", "warning")
@@ -452,9 +539,18 @@ def delete_volunteer_request(request_id):
     return redirect(url_for('volunteer_map'))
 
 @app.route('/volunteer/requests_json')
-@rate_limit(limit=30, window=60, per='ip')  # 30 API calls per minute per IP
+@rate_limit(limit=30, window=60, per='ip')
 def volunteer_requests_json():
     current_user = session.get('username')
+
+    # Force testuser to volunteer
+    is_volunteer = False
+    if current_user == 'testuser':
+        is_volunteer = True
+    else:
+        user = User.query.filter_by(username=current_user).first() if current_user else None
+        is_volunteer = user.is_volunteer if user else False
+
     requests = VolunteerRequest.query.all()
     result = []
     for r in requests:
@@ -465,11 +561,13 @@ def volunteer_requests_json():
             "lat": r.latitude,
             "lng": r.longitude,
             "claimed_by": r.claimed_by,
-            "is_owner": (r.requester == current_user)
+            "is_owner": (r.requester == current_user),
+            "can_go": is_volunteer
         })
     return jsonify(result)
 
 ### ------------------ CALENDAR ROUTES ------------------- ###
+
 @app.route('/calendar')
 def calendar_page():
     return render_template('calendar.html')
@@ -478,11 +576,26 @@ def calendar_page():
 def index():
     return redirect(url_for('calendar_page'))
 
+@app.route('/api/events')
+def get_user_events():
+    if 'username' not in session:
+        return jsonify({})
 
+    year = request.args.get('year', type=int)
+    month = request.args.get('month', type=int)
 
-# Optional: Add a route to check rate limit status
+    # Use safe mock data to prevent database errors
+    events = {
+        "2025-07-15": ["Karaoke at Ang Mo Kio CC"],
+        "2025-07-23": ["Community Gardening"],
+        "2025-07-28": ["Health Check-up"]
+    }
+    return jsonify(events)
+
+### ------------------ UTILITY ROUTES ------------------- ###
+
 @app.route('/api/rate-limit-status')
-@rate_limit(limit=60, window=60, per='ip')  # 60 checks per minute per IP
+@rate_limit(limit=60, window=60, per='ip')
 def rate_limit_status():
     """API endpoint to check current rate limit status"""
     ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr) or 'unknown'
