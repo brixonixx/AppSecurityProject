@@ -1,10 +1,16 @@
 # testrun2.py - With SQLAlchemy-based Forum and Volunteer Features + Comments
 
-from flask import Flask, request, redirect, url_for, render_template, session, flash
+from flask import Flask, render_template, request, session, redirect, url_for, flash, jsonify
+from markupsafe import escape
 from flask_sqlalchemy import SQLAlchemy
 from wtforms import Form, StringField, TextAreaField, IntegerField, validators
-from datetime import datetime
+from datetime import datetime, timedelta
 import uuid
+import os
+from sqlalchemy import text
+from functools import wraps
+from collections import defaultdict
+import time
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
@@ -13,6 +19,116 @@ app.secret_key = 'your_secret_key'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+
+### ------------------ RATE LIMITING ------------------- ###
+
+class RateLimiter:
+    def __init__(self):
+        # Store attempts: {ip_address: {endpoint: [(timestamp, count), ...]}}
+        self.attempts = defaultdict(lambda: defaultdict(list))
+        
+    def is_allowed(self, ip_address, endpoint, limit, window_seconds):
+        """
+        Check if request is allowed based on rate limiting rules
+        
+        Args:
+            ip_address: Client IP address
+            endpoint: API endpoint being accessed
+            limit: Maximum number of requests allowed
+            window_seconds: Time window in seconds
+            
+        Returns:
+            tuple: (is_allowed: bool, remaining_requests: int, reset_time: datetime)
+        """
+        now = datetime.utcnow()
+        window_start = now - timedelta(seconds=window_seconds)
+        
+        # Clean old entries
+        self.attempts[ip_address][endpoint] = [
+            (timestamp, count) for timestamp, count in self.attempts[ip_address][endpoint]
+            if timestamp > window_start
+        ]
+        
+        # Count current requests in window
+        current_count = sum(count for _, count in self.attempts[ip_address][endpoint])
+        
+        if current_count >= limit:
+            # Find the oldest request to determine when window resets
+            if self.attempts[ip_address][endpoint]:
+                oldest_request = min(self.attempts[ip_address][endpoint])[0]
+                reset_time = oldest_request + timedelta(seconds=window_seconds)
+            else:
+                reset_time = now + timedelta(seconds=window_seconds)
+            return False, 0, reset_time
+        
+        # Add current request
+        self.attempts[ip_address][endpoint].append((now, 1))
+        
+        remaining = limit - (current_count + 1)
+        reset_time = now + timedelta(seconds=window_seconds)
+        
+        return True, remaining, reset_time
+
+# Global rate limiter instance
+rate_limiter = RateLimiter()
+
+def rate_limit(limit=10, window=60, per='ip'):
+    """
+    Rate limiting decorator
+    
+    Args:
+        limit: Number of requests allowed
+        window: Time window in seconds
+        per: Rate limit per 'ip' or 'user' (if logged in)
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # Determine identifier for rate limiting
+            if per == 'user' and 'username' in session:
+                identifier = f"user:{session['username']}"
+            else:
+                identifier = request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr)
+                if identifier is None:
+                    identifier = 'unknown'
+            
+            endpoint = request.endpoint or f.__name__
+            
+            # Check rate limit
+            allowed, remaining, reset_time = rate_limiter.is_allowed(
+                identifier, endpoint, limit, window
+            )
+            
+            if not allowed:
+                # Rate limit exceeded
+                response = jsonify({
+                    'error': 'Rate limit exceeded',
+                    'message': f'Too many requests. Try again after {reset_time.strftime("%Y-%m-%d %H:%M:%S")} UTC',
+                    'reset_time': reset_time.isoformat()
+                })
+                response.status_code = 429
+                response.headers['X-RateLimit-Limit'] = str(limit)
+                response.headers['X-RateLimit-Remaining'] = '0'
+                response.headers['X-RateLimit-Reset'] = str(int(reset_time.timestamp()))
+                response.headers['Retry-After'] = str(int((reset_time - datetime.utcnow()).total_seconds()))
+                
+                # For HTML requests, show a user-friendly page
+                if request.accept_mimetypes.accept_html:
+                    flash(f"Too many requests. Please wait until {reset_time.strftime('%H:%M:%S')} UTC before trying again.", "warning")
+                    return redirect(request.referrer or url_for('index'))
+                
+                return response
+            
+            # Add rate limit headers to response
+            response = f(*args, **kwargs)
+            if hasattr(response, 'headers'):
+                response.headers['X-RateLimit-Limit'] = str(limit)
+                response.headers['X-RateLimit-Remaining'] = str(remaining)
+                response.headers['X-RateLimit-Reset'] = str(int(reset_time.timestamp()))
+            
+            return response
+        return decorated_function
+    return decorator
 
 ### ------------------ MODELS ------------------- ###
 
@@ -179,9 +295,10 @@ def delete_comment(comment_id):
 @app.route('/volunteer')
 def view_volunteers():
     requests = VolunteerRequest.query.all()
-    return render_template('volunteer.html', requests=requests)
+    return render_template('volunteer_map.html', requests=requests)
 
 @app.route('/volunteer/new', methods=['GET', 'POST'])
+@rate_limit(limit=3, window=300, per='user')  # 3 volunteer requests per 5 minutes per user
 def new_volunteer_request():
     if 'username' not in session:
         flash("Login required", "warning")
@@ -200,6 +317,7 @@ def new_volunteer_request():
     return render_template('new_volunteer.html')
 
 @app.route('/volunteer/claim/<int:request_id>')
+@rate_limit(limit=10, window=60, per='user')  # 10 claims per minute per user
 def claim_volunteer_request(request_id):
     if 'username' not in session:
         flash("Login required", "warning")
@@ -213,6 +331,76 @@ def claim_volunteer_request(request_id):
 
     return redirect(url_for('view_volunteers'))
 
+@app.route('/volunteer/map', methods=['GET', 'POST'])
+@rate_limit(limit=5, window=300, per='ip')  # 5 map requests per 5 minutes per IP
+def volunteer_map():
+    if request.method == 'POST':
+        lat = request.form.get('lat', type=float)
+        lng = request.form.get('lng', type=float)
+        username = session.get('username', 'anonymous')
+
+        if lat is None or lng is None:
+            flash("Location required", "danger")
+            return redirect(url_for('volunteer_map'))
+
+        vr = VolunteerRequest(
+            title="Help Request",
+            description="User requested help",
+            requester=username,
+            latitude=lat,
+            longitude=lng
+        )
+        db.session.add(vr)
+        db.session.commit()
+
+        flash("Help request sent!", "success")
+        return redirect(url_for('volunteer_map'))
+
+    return render_template('volunteer_map.html')
+
+@app.route('/volunteer/delete/<int:request_id>', methods=['POST'])
+@rate_limit(limit=3, window=60, per='user')  # 3 deletions per minute per user
+def delete_volunteer_request(request_id):
+    if 'username' not in session:
+        flash("Login required to delete your request", "warning")
+        return redirect(url_for('volunteer_map'))
+
+    vr = VolunteerRequest.query.get(request_id)
+    if not vr:
+        flash("Request not found", "danger")
+        return redirect(url_for('volunteer_map'))
+
+    # Only allow the original requester to delete their own request
+    if vr.requester != session['username']:
+        flash("You are not authorized to delete this request", "danger")
+        return redirect(url_for('volunteer_map'))
+
+    db.session.delete(vr)
+    db.session.commit()
+
+    flash("Your help request has been deleted!", "success")
+    return redirect(url_for('volunteer_map'))
+
+@app.route('/volunteer/requests_json')
+@rate_limit(limit=30, window=60, per='ip')  # 30 API calls per minute per IP
+def volunteer_requests_json():
+    current_user = session.get('username')
+    requests = VolunteerRequest.query.all()
+    result = []
+    for r in requests:
+        result.append({
+            "id": r.id,
+            "title": r.title,
+            "description": r.description,
+            "lat": r.latitude,
+            "lng": r.longitude,
+            "claimed_by": r.claimed_by,
+            "is_owner": (r.requester == current_user)
+        })
+    return jsonify(result)
+
+### ------------------ CALENDAR ROUTES ------------------- ###
+
 @app.route('/calendar')
 def calendar_page():
     return render_template('calendar.html')
@@ -220,6 +408,35 @@ def calendar_page():
 @app.route('/')
 def index():
     return redirect(url_for('calendar_page'))
+
+@app.route('/api/events')
+def get_user_events():
+    if 'username' not in session:
+        return jsonify({})
+
+    year = request.args.get('year', type=int)
+    month = request.args.get('month', type=int)
+
+    # Example: Assume you have an Event model and a UserEventSignUp table
+    events_data = db.session.execute(text("""
+        SELECT DATE_FORMAT(e.date, '%%Y-%%m-%%d') as date, e.name
+        FROM events e
+        JOIN event_signups s ON e.id = s.event_id
+        WHERE s.username = :username
+        AND YEAR(e.date) = :year
+        AND MONTH(e.date) = :month
+    """), {
+        "username": session['username'],
+        "year": year,
+        "month": month
+    }).fetchall()
+
+    events = {}
+    for row in events_data:
+        events.setdefault(row.date, []).append(row.name)
+
+    return jsonify(events)
+### ------------------ RUN APP ------------------- ###
 
 if __name__ == '__main__':
     with app.app_context():

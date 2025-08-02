@@ -478,6 +478,35 @@ def calendar_page():
 def index():
     return redirect(url_for('calendar_page'))
 
+@app.route('/api/events')
+def get_user_events():
+    if 'username' not in session:
+        return jsonify({})
+
+    year = request.args.get('year', type=int)
+    month = request.args.get('month', type=int)
+
+    # Example: Assume you have an Event model and a UserEventSignUp table
+    events_data = db.session.execute(text("""
+        SELECT DATE_FORMAT(e.date, '%%Y-%%m-%%d') as date, e.name
+        FROM events e
+        JOIN event_signups s ON e.id = s.event_id
+        WHERE s.username = :username
+        AND YEAR(e.date) = :year
+        AND MONTH(e.date) = :month
+    """), {
+        "username": session['username'],
+        "year": year,
+        "month": month
+    }).fetchall()
+
+    events = {}
+    for row in events_data:
+        events.setdefault(row.date, []).append(row.name)
+
+    return jsonify(events)
+
+
 # Optional: Add a route to check rate limit status
 @app.route('/api/rate-limit-status')
 @rate_limit(limit=60, window=60, per='ip')  # 60 checks per minute per IP
