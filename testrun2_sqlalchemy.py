@@ -478,22 +478,6 @@ def calendar_page():
 def index():
     return redirect(url_for('calendar_page'))
 
-@app.route('/api/events')
-def get_user_events():
-    if 'username' not in session:
-        return jsonify({})
-
-    year = request.args.get('year', type=int)
-    month = request.args.get('month', type=int)
-
-    # Temporary mock data (replace with MySQL query later)
-    events = {
-        "2025-07-15": ["Karaoke at Ang Mo Kio CC"],
-        "2025-07-23": ["Community Gardening"],
-        "2025-07-28": ["Health Check-up"]
-    }
-    return jsonify(events)
-
 
 
 # Optional: Add a route to check rate limit status
