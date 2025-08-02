@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Community Forum{% endblock %}
+
+{% block content %}
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FAQ Section</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            width: 80%;
+            margin: 50px auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .faq-item {
+            margin-bottom: 15px;
+        }
+        .faq-item button {
+            width: 100%;
+            padding: 15px;
+            text-align: left;
+            background-color: #008CBA;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+        .faq-item button:hover {
+            background-color: #005f73;
+        }
+        .answer {
+            padding: 15px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Frequently Asked Questions (FAQ)</h1>
+
+        <div class="faq-item">
+            <button onclick="toggleAnswer('answer1')">What is Python?</button>
+            <div id="answer1" class="answer">
+                Python is a high-level, interpreted programming language known for its readability and versatility.
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button onclick="toggleAnswer('answer2')">How do I install Python?</button>
+            <div id="answer2" class="answer">
+                You can install Python by visiting the official website at <a href="https://www.python.org/downloads/" target="_blank">python.org/downloads</a>.
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button onclick="toggleAnswer('answer3')">What is a variable?</button>
+            <div id="answer3" class="answer">
+                A variable is a reserved memory location to store values that can be used and modified during a program's execution.
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button onclick="toggleAnswer('answer4')">What is a function in Python?</button>
+            <div id="answer4" class="answer">
+                A function is a block of reusable code that performs a specific task and can be called multiple times.
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button onclick="toggleAnswer('answer5')">How do I create a list in Python?</button>
+            <div id="answer5" class="answer">
+                A list is created by placing values inside square brackets, e.g., <code>my_list = [1, 2, 3]</code>.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleAnswer(id) {
+            var answer = document.getElementById(id);
+            if (answer.style.display === "block") {
+                answer.style.display = "none";
+            } else {
+                answer.style.display = "block";
+            }
+        }
+    </script>
+
+</body>
+</html>
+{% endblock %}

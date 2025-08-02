@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}{{ post.title }} - Community Forum{% endblock %}
+
+{% block content %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            width: 80%;
+            max-width: 1200px;
+            margin: 50px auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .profile-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        .profile-header .profile-image {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 3px solid #008CBA;
+        }
+        .profile-header .profile-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .profile-info {
+            flex: 1;
+            padding-left: 20px;
+        }
+        .profile-info h2 {
+            margin: 0;
+            color: #333;
+        }
+        .profile-info p {
+            color: #777;
+        }
+        .settings {
+            margin-top: 30px;
+        }
+        .settings h3 {
+            color: #333;
+        }
+        .setting-option {
+            margin-bottom: 15px;
+        }
+        .setting-option label {
+            font-size: 16px;
+            color: #555;
+        }
+        .setting-option select, .setting-option input {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            width: 100%;
+            max-width: 300px;
+        }
+        .setting-option input[type="checkbox"] {
+            width: auto;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #008CBA;
+            color: white;
+            border-radius: 5px;
+            text-align: center;
+            text-decoration: none;
+            font-size: 16px;
+        }
+        .btn:hover {
+            background-color: #005f73;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>User Profile</h1>
+
+        <!-- Profile Header -->
+        <div class="profile-header">
+            <div class="profile-image">
+                <img src="{{ user.profile_picture }}" alt="User Profile Picture">
+            </div>
+            <div class="profile-info">
+                <h2>{{ user.name }}</h2>
+                <p>Email: {{ user.email }}</p>
+                <p>Joined: {{ user.joined_date }}</p>
+                <a href="#" class="btn">Edit Profile</a>
+            </div>
+        </div>
+
+        <!-- Accessibility Settings -->
+        <div class="settings">
+            <h3>Accessibility Settings</h3>
+            <div class="setting-option">
+                <label for="theme">Theme:</label>
+                <select id="theme">
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                </select>
+            </div>
+
+            <div class="setting-option">
+                <label for="font-size">Font Size:</label>
+                <select id="font-size">
+                    <option value="small">Small</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="large">Large</option>
+                </select>
+            </div>
+
+            <div class="setting-option">
+                <label for="high-contrast">High Contrast Mode:</label>
+                <input type="checkbox" id="high-contrast">
+            </div>
+
+            <div class="setting-option">
+                <label for="screen-reader">Screen Reader Mode:</label>
+                <input type="checkbox" id="screen-reader">
+            </div>
+
+            <a href="#" class="btn">Save Changes</a>
+        </div>
+    </div>
+
+</body>
+</html>
+
+{% endblock %}
