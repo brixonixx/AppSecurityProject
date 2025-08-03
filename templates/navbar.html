@@ -1,0 +1,37 @@
+<nav class="navbar">
+    <div class="container">
+        <div class="nav-left">
+            <a href="{{ url_for('home') }}" class="nav-brand">🌿 SilverSage</a>
+            <a href="{{ url_for('home') }}">Home</a>
+            <a href="{{ url_for('dashboard') }}">Dashboard</a>
+            <a href="/calendar">Schedule</a>
+            <a href="/forum">Forum</a>
+            <a href="/volunteer">Volunteer</a>
+            <a href="/events">Events</a>
+        </div>
+        
+        <div class="nav-right">
+            <!-- Profile Dropdown -->
+            <div class="dropdown profile-dropdown">
+                <a href="#" class="profile-circle dropdown-toggle">
+                    {{ current_user.username[0]|upper }}
+                </a>
+                <div class="dropdown-menu profile-menu">
+                    <div class="dropdown-header">
+                        <strong>{{ current_user.username }}</strong>
+                        <small>{{ current_user.email }}</small>
+                    </div>
+                    <div class="dropdown-divider"></div>
+                    <a href="{{ url_for('auth.profile') }}">👤 Profile Settings</a>
+                    <a href="{{ url_for('auth.change_password') }}">🔐 Security Settings</a>
+                    <a href="/settings">⚙️ General Settings</a>
+                    <div class="dropdown-divider"></div>
+                    <a href="/faq">❓ FAQ</a>
+                    <a href="{{ url_for('events.profile_events') }}">Signed-up Events</a>
+                    <div class="dropdown-divider"></div>
+                    <a href="{{ url_for('auth.logout') }}" class="logout-link">🚪 Logout</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>

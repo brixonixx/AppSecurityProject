@@ -1,0 +1,48 @@
+<nav class="navbar">
+    <div class="container">
+        <div class="nav-left">
+            <a href="{{ url_for('home') }}" class="nav-brand">🌿 SilverSage</a>
+            <a href="{{ url_for('home') }}">Home</a>
+            <a href="{{ url_for('dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('admin.event_management') }}">Events</a>
+            <a href="{{ url_for('admin.forum_management') }}">Forum</a>
+            <a href="{{ url_for('admin.faq_management') }}">FAQ</a>
+        </div>
+        
+        <div class="nav-right">
+            <div class="dropdown admin-dropdown">
+                <a href="#" class="dropdown-toggle admin-toggle">Admin Panel ▼</a>
+                <div class="dropdown-menu admin-menu">
+                    <a href="{{ url_for('admin.admin_dashboard') }}">Admin Dashboard</a>
+                    <a href="{{ url_for('admin.user_list') }}">User Management</a>
+                    <a href="{{ url_for('admin.create_user') }}">Create User</a>
+                    <a href="{{ url_for('admin.volunteer_management') }}">Volunteer Management</a>
+                    <a href="{{ url_for('admin.audit_logs') }}">Audit Logs</a>
+                    <div class="dropdown-divider"></div>
+                    <a href="{{ url_for('admin.export_users') }}">Export Users</a>
+                </div>
+            </div>
+            
+            <!-- Profile Dropdown -->
+            <div class="dropdown profile-dropdown">
+                <a href="#" class="profile-circle dropdown-toggle">
+                    {{ current_user.username[0]|upper }}
+                </a>
+                <div class="dropdown-menu profile-menu">
+                    <div class="dropdown-header">
+                        <strong>{{ current_user.username }}</strong>
+                        <small>{{ current_user.email }}</small>
+                    </div>
+                    <div class="dropdown-divider"></div>
+                    <a href="{{ url_for('auth.profile') }}">👤 Profile Settings</a>
+                    <a href="{{ url_for('auth.change_password') }}">🔐 Security Settings</a>
+                    <a href="/settings">⚙️ General Settings</a>
+                    <div class="dropdown-divider"></div>
+                    <a href="/faq">❓ FAQ</a>
+                    <div class="dropdown-divider"></div>
+                    <a href="{{ url_for('auth.logout') }}" class="logout-link">🚪 Logout</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>

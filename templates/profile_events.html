@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}My Events{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="text-center mb-4">My Signed-Up Events</h1>
+    {% if events %}
+    <div class="row">
+        {% for event in events %}
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <img src="{{ event.image_file }}" class="card-img-top" alt="{{ event.title }}">
+                <div class="card-body">
+                    <h5 class="card-title">Points to be Earned: {{ event.points_to_be_earned }}</h5>
+                    <h6 class="card-title">{{ event.title }}</h6>
+                    <p class="card-text">{{ event.description }}</p>
+                    <form action="{{ url_for('events.unsignup_event', event_id=event.event_id, user_id=current_user.id) }}" method="POST" style="display: inline;">
+                        <button type="submit" class="btn btn-danger" >Cancel</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-center">You have not signed up for any events yet.</p>
+    {% endif %}
+</div>
+
+<!-- JavaScript for Confirmation -->
+<script>
+    function confirmCancel(eventTitle, formId) {
+        if (confirm(`Are you sure you want to cancel "${eventTitle}"?`)) {
+            document.getElementById(formId).submit();
+        }
+    }
+</script>
+{% endblock %}

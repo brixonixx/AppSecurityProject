@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Events{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Manage Events</h1>
+
+    <!-- Add Event Form -->
+    <form
+        action="{{ url_for('admin.event_management') }}"
+        method="POST"
+        enctype="multipart/form-data"
+        id="eventForm"
+    >
+        {{ form.hidden_tag() }}
+
+        <div class="form-group mb-3">
+            {{ form.title.label(class="form-label") }}
+            {{ form.title(class="form-control") }}
+            {% for error in form.title.errors %}
+            <div class="text-danger">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <div class="form-group mb-3">
+            {{ form.description.label(class="form-label") }}
+            {{ form.description(class="form-control") }}
+            {% for error in form.description.errors %}
+            <div class="text-danger">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <div class="form-group mb-3">
+            {{ form.image_file.label(class="form-label") }}
+            {{ form.image_file(class="form-control-file") }}
+            {% for error in form.image_file.errors %}
+            <div class="text-danger">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <button type="submit" class="btn btn-primary">Add Event</button>
+    </form>
+
+    <hr>
+
+    <!-- Existing Events Section -->
+    <h2>Existing Events</h2>
+    {% if events %}
+    <div class="row">
+        {% for event in events %}
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                {% if event.image_file %}
+                    <img src="{{ url_for('static', filename=event.image_file.split('static/')[-1]) }}" class="card-img-top" alt="{{ event.title }}" style="height: 200px; object-fit: cover;">
+                {% else %}
+                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                        <span class="text-muted">No Image</span>
+                    </div>
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ event.title }}</h5>
+                    <p class="card-text">{{ event.description }}</p>
+                    <p class="text-muted small">Created: {{ event.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                    <form method="POST" action="{{ url_for('admin.delete_event', event_id=event.event_id) }}" style="display: inline;">
+                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete the event \'{{ event.title }}\'?')">Delete</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <h4>No Events Found</h4>
+        <p>No events have been created yet. Use the form above to add your first event!</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    function confirmDelete(eventTitle, formId) {
+        if (confirm(`Are you sure you want to delete the event "${eventTitle}"?`)) {
+            document.getElementById(formId).submit();
+        }
+    }
+</script>
+{% endblock %}

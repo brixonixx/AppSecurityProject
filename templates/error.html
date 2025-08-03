@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Error - SilverSage{% endblock %}
+
+{% block content %}
+<div class="profile-container" style="text-align: center;">
+    <h1 style="font-size: 72px; color: var(--danger-color); margin-bottom: 20px;">
+        {{ error_code }}
+    </h1>
+    
+    <h2 style="color: var(--primary-color); margin-bottom: 30px;">
+        {{ error_message }}
+    </h2>
+    
+    <p style="font-size: 20px; margin-bottom: 40px;">
+        We're sorry, but something went wrong. Please try again or contact support if the problem persists.
+    </p>
+    
+    <a href="{{ url_for('index') }}" class="btn btn-primary">
+        Go to Homepage
+    </a>
+</div>
+{% endblock %}

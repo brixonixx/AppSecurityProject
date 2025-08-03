@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}Audit Logs - Admin - SilverSage{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <h1>Security Audit Logs</h1>
+    
+    <!-- Search and Filter -->
+    <div class="search-filter-bar">
+        <form method="GET" action="{{ url_for('admin.audit_logs') }}" class="search-form">
+            <input type="text" name="search" placeholder="Search logs..." 
+                   value="{{ search }}" class="search-input">
+            
+            <select name="action" class="filter-select">
+                <option value="">All Actions</option>
+                {% for action in actions %}
+                <option value="{{ action }}" {% if action_filter == action %}selected{% endif %}>
+                    {{ action }}
+                </option>
+                {% endfor %}
+            </select>
+            
+            <button type="submit" class="btn btn-primary">Search</button>
+            <a href="{{ url_for('admin.audit_logs') }}" class="btn btn-secondary">Clear</a>
+        </form>
+    </div>
+    
+    <!-- Logs Table -->
+    <div class="logs-table">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>User</th>
+                    <th>Action</th>
+                    <th>IP Address</th>
+                    <th>User Agent</th>
+                    <th>Status</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs.items %}
+                <tr {% if not log.success %}class="failed-row"{% endif %}>
+                    <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td>
+                        {% if log.user_id %}
+                            {% if log.user %}
+                                {{ log.user.username }}
+                            {% else %}
+                                User ID: {{ log.user_id }}
+                            {% endif %}
+                        {% else %}
+                            Guest
+                        {% endif %}
+                    </td>
+                    <td>{{ log.action }}</td>
+                    <td>{{ log.ip_address }}</td>
+                    <td title="{{ log.user_agent }}">
+                        {{ log.user_agent[:50] }}{% if log.user_agent|length > 50 %}...{% endif %}
+                    </td>
+                    <td>
+                        {% if log.success %}
+                            <span class="badge badge-active">Success</span>
+                        {% else %}
+                            <span class="badge badge-inactive">Failed</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if log.details %}
+                            <small>{{ log.details[:100] }}{% if log.details|length > 100 %}...{% endif %}</small>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <!-- Pagination -->
+        {% if logs.pages > 1 %}
+        <div class="pagination">
+            {% if logs.has_prev %}
+            <a href="{{ url_for('admin.audit_logs', page=logs.prev_num, search=search, action=action_filter) }}" 
+               class="btn btn-secondary">← Previous</a>
+            {% endif %}
+            
+            <span class="page-info">Page {{ logs.page }} of {{ logs.pages }}</span>
+            
+            {% if logs.has_next %}
+            <a href="{{ url_for('admin.audit_logs', page=logs.next_num, search=search, action=action_filter) }}" 
+               class="btn btn-secondary">Next →</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    
+    <div style="margin-top: 20px;">
+        <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-secondary">
+            ← Back to Admin Dashboard
+        </a>
+    </div>
+</div>
+
+<style>
+.logs-table {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-top: 20px;
+}
+
+.failed-row {
+    background-color: #fff5f5;
+}
+
+.failed-row:hover {
+    background-color: #fee;
+}
+
+.data-table {
+    table-layout: fixed;
+}
+
+.data-table th:nth-child(1) { width: 15%; }
+.data-table th:nth-child(2) { width: 10%; }
+.data-table th:nth-child(3) { width: 20%; }
+.data-table th:nth-child(4) { width: 12%; }
+.data-table th:nth-child(5) { width: 20%; }
+.data-table th:nth-child(6) { width: 8%; }
+.data-table th:nth-child(7) { width: 15%; }
+</style>
+{% endblock %}
