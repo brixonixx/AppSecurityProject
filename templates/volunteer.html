@@ -3,6 +3,8 @@
 
 {% block content %}
 <h1>Request Help</h1>
+
+<!-- Help Request Section -->
 <div class="mt-3">
   <button id="sendHelpBtn" class="btn btn-primary">Send Help (Share Location)</button>
   <p id="status" class="text-muted mt-2"></p>
@@ -11,12 +13,23 @@
   <input type="hidden" name="lat" id="latInput" required>
   <input type="hidden" name="lng" id="lngInput" required>
 </form>
+
+<!-- Map Section -->
+<div class="mt-4">
+  <h2>Current Help Requests</h2>
+  <div id="map" style="height: 400px; width: 100%; border: 1px solid #ccc; margin-top: 15px;"></div>
+  <p id="mapStatus" class="text-muted mt-2">Loading help requests...</p>
+</div>
 {% endblock %}
 
 {% block scripts %}
   {{ super() }}
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
   <script>
     document.addEventListener('DOMContentLoaded', () => {
+      // Help request functionality
       const sendHelpBtn = document.getElementById('sendHelpBtn');
       const status = document.getElementById('status');
       const latInput = document.getElementById('latInput');
@@ -43,6 +56,44 @@
           }
         );
       });
+
+      // Map functionality
+      const map = L.map('map').setView([1.3521, 103.8198], 11);
+      const markers = {};
+      const mapStatus = document.getElementById('mapStatus');
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+
+      function addMarker(request) {
+        const marker = L.marker([request.lat, request.lng]).addTo(map);
+        // Simple popup without action buttons - just shows information
+        let popupContent = `<b>${request.title}</b><br>${request.description}`;
+        if (request.claimed_by) {
+          popupContent += `<br><small class="text-muted">Claimed by: ${request.claimed_by}</small>`;
+        }
+        marker.bindPopup(popupContent);
+        markers[request.id] = marker;
+      }
+
+      // Load and display help requests
+      fetch('{{ url_for("volunteer_requests_json") }}')
+        .then(res => res.json())
+        .then(data => {
+          if (data.length === 0) {
+            mapStatus.textContent = "No help requests currently active.";
+          } else {
+            mapStatus.textContent = `Showing ${data.length} help request(s).`;
+            data.forEach(req => {
+              if (req.lat && req.lng) addMarker(req);
+            });
+          }
+        })
+        .catch(error => {
+          mapStatus.textContent = "Error loading help requests.";
+          console.error('Error fetching requests:', error);
+        });
     });
   </script>
 {% endblock %}
