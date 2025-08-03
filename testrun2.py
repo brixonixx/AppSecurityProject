@@ -1,4 +1,4 @@
-# testrun2.py - Combined Flask Application with All Features
+# testrun2.py - Complete Flask Application with Database-Centric Approach
 
 from flask import Flask, render_template, request, session, redirect, url_for, flash, jsonify
 from markupsafe import escape
@@ -85,8 +85,12 @@ def rate_limit(limit=10, window=60, per='ip'):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             # Determine identifier for rate limiting
-            if per == 'user' and 'username' in session:
-                identifier = f"user:{session['username']}"
+            if per == 'user':
+                current_user = get_current_user()
+                if current_user:
+                    identifier = f"user:{current_user.id}"
+                else:
+                    identifier = request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr)
             else:
                 identifier = request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr)
                 if identifier is None:
@@ -130,6 +134,72 @@ def rate_limit(limit=10, window=60, per='ip'):
         return decorated_function
     return decorator
 
+### ------------------ DATABASE HELPER FUNCTIONS ------------------- ###
+
+def get_current_user():
+    """Helper function to get current user from database"""
+    if 'user_id' not in session:
+        return None
+    
+    try:
+        return db.session.query(User).get(session['user_id'])
+    except Exception as e:
+        # Handle case where is_volunteer column doesn't exist
+        try:
+            result = db.session.execute(
+                text("SELECT id, username, password, email, created_at FROM user WHERE id = :user_id"),
+                {"user_id": session['user_id']}
+            ).first()
+            
+            if result:
+                # Create a user-like object
+                class SimpleUser:
+                    def __init__(self, id, username, password, email, created_at):
+                        self.id = id
+                        self.username = username
+                        self.password = password
+                        self.email = email
+                        self.created_at = created_at
+                        self.is_volunteer = session.get('is_volunteer', False)
+                
+                return SimpleUser(*result)
+            return None
+        except Exception as e2:
+            print(f"Error getting current user: {e2}")
+            return None
+
+def get_user_by_username(username):
+    """Helper function to get user by username"""
+    try:
+        return db.session.query(User).filter(User.username == username).first()
+    except Exception as e:
+        # Handle case where is_volunteer column doesn't exist
+        try:
+            result = db.session.execute(
+                text("SELECT id, username, password, email, created_at FROM user WHERE username = :username"),
+                {"username": username}
+            ).first()
+            
+            if result:
+                class SimpleUser:
+                    def __init__(self, id, username, password, email, created_at):
+                        self.id = id
+                        self.username = username
+                        self.password = password
+                        self.email = email
+                        self.created_at = created_at
+                        self.is_volunteer = username == 'testuser' or session.get('is_volunteer', False)
+                
+                return SimpleUser(*result)
+            return None
+        except Exception as e2:
+            print(f"Error getting user by username: {e2}")
+            return None
+
+def get_user_by_id(user_id):
+    """Helper function to get user by ID"""
+    return db.session.query(User).get(user_id)
+
 ### ------------------ MODELS ------------------- ###
 
 class User(db.Model):
@@ -138,14 +208,15 @@ class User(db.Model):
     password = db.Column(db.String(120), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    # Removed is_volunteer to match existing database
+    is_volunteer = db.Column(db.Boolean, default=False)  # Enhanced volunteer field
 
     def to_dict(self):
         return {
             'id': self.id,
             'username': self.username,
             'email': self.email,
-            'created_at': self.created_at.isoformat()
+            'created_at': self.created_at.isoformat(),
+            'is_volunteer': self.is_volunteer
         }
 
 class Post(db.Model):
@@ -191,85 +262,168 @@ def nl2br_filter(text):
 
 @app.before_request
 def dummy_login():
-    if 'username' not in session:
-        session['username'] = 'testuser'
+    if 'user_id' not in session:
+        # Try to find testuser or create one
+        try:
+            # First try with is_volunteer column
+            testuser = db.session.query(User).filter(User.username == 'testuser').first()
+            if not testuser:
+                testuser = User(
+                    username='testuser',
+                    password='testpass',
+                    email='test@example.com',
+                    is_volunteer=True
+                )
+                db.session.add(testuser)
+                db.session.commit()
+        except Exception as e:
+            # Handle case where is_volunteer column doesn't exist
+            try:
+                # Query without is_volunteer column
+                result = db.session.execute(
+                    text("SELECT id, username, password, email, created_at FROM user WHERE username = :username"),
+                    {"username": "testuser"}
+                ).first()
+                
+                if result:
+                    session['user_id'] = result[0]
+                    session['username'] = result[1]
+                    session['is_volunteer'] = True  # Store in session
+                    return
+                else:
+                    # Create testuser without is_volunteer
+                    db.session.execute(
+                        text("INSERT INTO user (username, password, email, created_at) VALUES (:username, :password, :email, :created_at)"),
+                        {
+                            "username": "testuser",
+                            "password": "testpass", 
+                            "email": "test@example.com",
+                            "created_at": datetime.utcnow()
+                        }
+                    )
+                    db.session.commit()
+                    
+                    # Get the created user
+                    result = db.session.execute(
+                        text("SELECT id, username FROM user WHERE username = :username"),
+                        {"username": "testuser"}
+                    ).first()
+                    
+                    session['user_id'] = result[0]
+                    session['username'] = result[1]
+                    session['is_volunteer'] = True
+                    return
+            except Exception as e2:
+                print(f"Error in auto-login: {e2}")
+                return
+        
+        session['user_id'] = testuser.id
+        session['username'] = testuser.username
 
 # ---------------- ADMIN SESSION SWITCH ---------------- #
 
 @app.route('/set_admin')
 def set_admin():
-    session['username'] = 'admin'
+    # Find or create admin user
+    admin_user = get_user_by_username('admin')
+    if not admin_user:
+        try:
+            admin_user = User(
+                username='admin',
+                password='adminpass',
+                email='admin@example.com',
+                is_volunteer=True
+            )
+            db.session.add(admin_user)
+            db.session.commit()
+        except:
+            admin_user = User(
+                username='admin',
+                password='adminpass',
+                email='admin@example.com'
+            )
+            db.session.add(admin_user)
+            db.session.commit()
+    
+    session['user_id'] = admin_user.id
+    session['username'] = admin_user.username
     flash("You are now logged in as admin (development mode).", "info")
     return redirect(url_for('index'))
 
 @app.route('/set_user')
 def set_user():
-    session['username'] = 'testuser'
-    flash("You are now logged in as normal user (development mode).", "info")
+    # Find testuser
+    testuser = get_user_by_username('testuser')
+    if testuser:
+        session['user_id'] = testuser.id
+        session['username'] = testuser.username
+        flash("You are now logged in as normal user (development mode).", "info")
     return redirect(url_for('index'))
 
 # ---------------- ADMIN ROUTES ---------------- #
 
 @app.route('/admin/forum', methods=['GET', 'POST'])
 def admin_forum():
-    # Ensure only admin can access
-    if session.get('username') != 'admin':
+    # Get current user from database
+    current_user = get_current_user()
+    if not current_user or current_user.username != 'admin':
         flash("Unauthorized access.", "danger")
         return redirect(url_for('forum'))
 
     if request.method == 'POST':
         # Delete all forum posts
-        Comment.query.delete()
-        Post.query.delete()
+        db.session.query(Comment).delete()
+        db.session.query(Post).delete()
         db.session.commit()
         flash("All posts have been deleted successfully!", "success")
         return redirect(url_for('admin_forum'))
 
-    posts = Post.query.order_by(Post.created_at.desc()).all()
+    posts = db.session.query(Post).order_by(Post.created_at.desc()).all()
     return render_template('admin_forum.html', posts=posts)
 
 @app.route('/admin/volunteer', methods=['GET', 'POST'])
 def admin_volunteer():
-    # Ensure only admin can access
-    if session.get('username') != 'admin':
+    # Get current user from database
+    current_user = get_current_user()
+    if not current_user or current_user.username != 'admin':
         flash("Unauthorized access.", "danger")
         return redirect(url_for('view_volunteers'))
 
     if request.method == 'POST':
         # Delete all volunteer requests
-        VolunteerRequest.query.delete()
+        db.session.query(VolunteerRequest).delete()
         db.session.commit()
         flash("All volunteer requests have been deleted successfully!", "success")
         return redirect(url_for('admin_volunteer'))
 
-    requests_list = VolunteerRequest.query.all()
+    requests_list = db.session.query(VolunteerRequest).all()
     return render_template('admin_volunteer_map.html', requests=requests_list)
 
 ### ------------------ FORUM ROUTES ------------------- ###
 
 @app.route('/forum')
 def forum():
-    posts = Post.query.order_by(Post.id.desc()).all()
+    posts = db.session.query(Post).order_by(Post.id.desc()).all()
     return render_template('forum.html', posts=posts)
 
 @app.route('/forum/post/<int:post_id>')
 def view_post(post_id):
-    post = Post.query.get_or_404(post_id)
-    comments = Comment.query.filter_by(post_id=post_id).order_by(Comment.created_at.asc()).all()
+    post = db.session.query(Post).get_or_404(post_id)
+    comments = db.session.query(Comment).filter_by(post_id=post_id).order_by(Comment.created_at.asc()).all()
     return render_template('post_detail.html', post=post, comments=comments)
 
 @app.route('/forum/new', methods=['GET', 'POST'])
 @rate_limit(limit=5, window=300, per='user')  # 5 posts per 5 minutes per user
 def new_post():
-    if 'username' not in session:
+    current_user = get_current_user()
+    if not current_user:
         flash("Login required", "warning")
         return redirect(url_for('login'))
 
     if request.method == 'POST':
         title = request.form.get('title')
         content = request.form.get('content')
-        author = session['username']
-        post = Post(title=title, content=content, author=author)
+        post = Post(title=title, content=content, author=current_user.username)
         db.session.add(post)
         db.session.commit()
         flash("Post created successfully!", "success")
@@ -280,14 +434,15 @@ def new_post():
 @app.route('/forum/edit/<int:post_id>', methods=['GET', 'POST'])
 @rate_limit(limit=10, window=300, per='user')  # 10 edits per 5 minutes per user
 def edit_post(post_id):
-    if 'username' not in session:
+    current_user = get_current_user()
+    if not current_user:
         flash("Login required", "warning")
         return redirect(url_for('login'))
 
-    post = Post.query.get_or_404(post_id)
+    post = db.session.query(Post).get_or_404(post_id)
 
     # Ensure only the author can edit
-    if post.author != session['username']:
+    if post.author != current_user.username:
         flash("You are not authorized to edit this post.", "danger")
         return redirect(url_for('view_post', post_id=post_id))
 
@@ -303,14 +458,15 @@ def edit_post(post_id):
 @app.route('/forum/delete/<int:post_id>', methods=['POST'])
 @rate_limit(limit=3, window=60, per='user')  # 3 deletions per minute per user
 def delete_post(post_id):
-    if 'username' not in session:
+    current_user = get_current_user()
+    if not current_user:
         flash("Login required", "warning")
         return redirect(url_for('login'))
 
-    post = Post.query.get_or_404(post_id)
+    post = db.session.query(Post).get_or_404(post_id)
 
     # Ensure only the author can delete
-    if post.author != session['username']:
+    if post.author != current_user.username:
         flash("You are not authorized to delete this post.", "danger")
         return redirect(url_for('forum'))
 
@@ -324,17 +480,18 @@ def delete_post(post_id):
 @app.route('/forum/post/<int:post_id>/comment', methods=['POST'])
 @rate_limit(limit=10, window=60, per='user')  # 10 comments per minute per user
 def add_comment(post_id):
-    if 'username' not in session:
+    current_user = get_current_user()
+    if not current_user:
         flash("Login required", "warning")
         return redirect(url_for('login'))
 
-    post = Post.query.get_or_404(post_id)
+    post = db.session.query(Post).get_or_404(post_id)
     comment_content = request.form.get('comment')
     
     if comment_content and comment_content.strip():
         comment = Comment(
             content=comment_content.strip(),
-            author=session['username'],
+            author=current_user.username,
             post_id=post_id
         )
         db.session.add(comment)
@@ -348,15 +505,16 @@ def add_comment(post_id):
 @app.route('/comment/delete/<int:comment_id>', methods=['POST'])
 @rate_limit(limit=5, window=60, per='user')  # 5 comment deletions per minute per user
 def delete_comment(comment_id):
-    if 'username' not in session:
+    current_user = get_current_user()
+    if not current_user:
         flash("Login required", "warning")
         return redirect(url_for('login'))
 
-    comment = Comment.query.get_or_404(comment_id)
+    comment = db.session.query(Comment).get_or_404(comment_id)
     post_id = comment.post_id
 
     # Ensure only the comment author can delete
-    if comment.author != session['username']:
+    if comment.author != current_user.username:
         flash("You are not authorized to delete this comment.", "danger")
         return redirect(url_for('view_post', post_id=post_id))
 
@@ -370,18 +528,23 @@ def delete_comment(comment_id):
 @app.route('/volunteer', methods=['GET', 'POST'])
 @rate_limit(limit=3, window=300, per='user')
 def volunteer():
-    if 'username' not in session:
+    current_user = get_current_user()
+    if not current_user:
         flash("Login required", "warning")
         return redirect(url_for('login'))
 
-    # Force testuser to be a volunteer
-    if session.get('username') == 'testuser':
-        session['is_volunteer'] = True
+    # Special handling for testuser - make them volunteer in database
+    if current_user.username == 'testuser':
+        try:
+            current_user.is_volunteer = True
+            db.session.commit()
+        except:
+            # If column doesn't exist, handle gracefully
+            session['is_volunteer'] = True
 
     if request.method == 'POST':
         lat = request.form.get('lat', type=float)
         lng = request.form.get('lng', type=float)
-        username = session['username']
 
         if lat is None or lng is None:
             flash("Location required", "danger")
@@ -390,7 +553,7 @@ def volunteer():
         vr = VolunteerRequest(
             title="Help Request",
             description="User requested help",
-            requester=username,
+            requester=current_user.username,
             latitude=lat,
             longitude=lng
         )
@@ -404,21 +567,50 @@ def volunteer():
 @app.route('/volunteer/map')
 @rate_limit(limit=5, window=300, per='ip')
 def volunteer_map():
-    if 'username' not in session:
+    current_user = get_current_user()
+    if not current_user:
         flash("Login required", "warning")
         return redirect(url_for('login'))
 
-    # Simplified: Allow all logged-in users to access volunteer map
-    return render_template('volunteer_map.html')
+    # Check if user is volunteer in database
+    is_volunteer = False
+    try:
+        if current_user.username == 'testuser':
+            current_user.is_volunteer = True
+            db.session.commit()
+        is_volunteer = current_user.is_volunteer
+    except:
+        # Handle missing column
+        is_volunteer = session.get('is_volunteer', False) or current_user.username == 'testuser'
+
+    if is_volunteer:
+        return render_template('volunteer_map.html')
+
+    flash("You must be a registered volunteer to view this page", "danger")
+    return redirect(url_for('volunteer'))
 
 @app.route('/volunteer/go/<int:request_id>', methods=['DELETE'])
 @rate_limit(limit=10, window=60, per='user')
 def volunteer_go_to_request(request_id):
-    if 'username' not in session:
+    current_user = get_current_user()
+    if not current_user:
         return jsonify({"success": False, "error": "Login required"}), 403
 
-    # Simplified: Allow all logged-in users to volunteer
-    vr = VolunteerRequest.query.get(request_id)
+    # Check volunteer status from database
+    is_volunteer = False
+    try:
+        if current_user.username == 'testuser':
+            current_user.is_volunteer = True
+            db.session.commit()
+        is_volunteer = current_user.is_volunteer
+    except:
+        # Handle missing column
+        is_volunteer = session.get('is_volunteer', False) or current_user.username == 'testuser'
+
+    if not is_volunteer:
+        return jsonify({"success": False, "error": "Only volunteers can do this"}), 403
+
+    vr = db.session.query(VolunteerRequest).get(request_id)
     if not vr:
         return jsonify({"success": False, "error": "Request not found"}), 404
 
@@ -428,44 +620,75 @@ def volunteer_go_to_request(request_id):
 
 @app.route('/volunteer/register', methods=['GET', 'POST'])
 def register_volunteer():
-    if 'username' not in session:
+    current_user = get_current_user()
+    if not current_user:
         flash("Login required to register as a volunteer", "warning")
         return redirect(url_for('login'))
 
-    # Simplified: Just redirect to volunteer map since we removed is_volunteer
-    flash("All users can volunteer! Welcome to the volunteer map.", "success")
-    return redirect(url_for('volunteer_map'))
+    # Special handling for testuser
+    if current_user.username == 'testuser':
+        try:
+            current_user.is_volunteer = True
+            db.session.commit()
+        except:
+            session['is_volunteer'] = True
+        flash("Testuser is automatically a volunteer!", "info")
+        return redirect(url_for('volunteer_map'))
 
-# Legacy route compatibility
+    if request.method == 'POST':
+        try:
+            current_user.is_volunteer = True
+            db.session.commit()
+            flash("You are now registered as a volunteer!", "success")
+        except Exception as e:
+            flash("Error registering as volunteer. Please contact administrator.", "danger")
+            print(f"Volunteer registration error: {e}")
+        return redirect(url_for('volunteer_map'))
+
+    return render_template('register_volunteer.html', user=current_user)
+
 @app.route('/volunteer/new', methods=['GET', 'POST'])
 @rate_limit(limit=3, window=300, per='user')
 def new_volunteer_request():
-    if 'username' not in session:
+    current_user = get_current_user()
+    if not current_user:
         flash("Login required", "warning")
         return redirect(url_for('login'))
 
-    if request.method == 'POST':
-        title = request.form.get('title')
-        description = request.form.get('description')
-        requester = session['username']
-        vr = VolunteerRequest(title=title, description=description, requester=requester)
-        db.session.add(vr)
-        db.session.commit()
-        flash("Support request posted!", "success")
-        return redirect(url_for('view_volunteers'))
+    # Special handling for testuser
+    if current_user.username == 'testuser':
+        try:
+            current_user.is_volunteer = True
+            db.session.commit()
+        except:
+            session['is_volunteer'] = True
+        flash("Testuser is automatically a volunteer!", "info")
+        return redirect(url_for('volunteer_map'))
 
-    return render_template('new_volunteer.html')
+    if request.method == 'POST':
+        try:
+            current_user.is_volunteer = True
+            db.session.commit()
+            flash("You are now registered as a volunteer!", "success")
+            return redirect(url_for('volunteer_map'))
+        except Exception as e:
+            flash("Error registering as volunteer. Please contact administrator.", "danger")
+            print(f"Volunteer registration error: {e}")
+            return redirect(url_for('volunteer'))
+
+    return render_template('register_volunteer.html', user=current_user)
 
 @app.route('/volunteer/claim/<int:request_id>')
 @rate_limit(limit=10, window=60, per='user')
 def claim_volunteer_request(request_id):
-    if 'username' not in session:
+    current_user = get_current_user()
+    if not current_user:
         flash("Login required", "warning")
         return redirect(url_for('login'))
 
-    vr = VolunteerRequest.query.get(request_id)
+    vr = db.session.query(VolunteerRequest).get(request_id)
     if vr and not vr.claimed_by:
-        vr.claimed_by = session['username']
+        vr.claimed_by = current_user.username
         db.session.commit()
         flash("You have claimed this request!", "info")
 
@@ -473,23 +696,24 @@ def claim_volunteer_request(request_id):
 
 # Legacy route compatibility
 def view_volunteers():
-    requests = VolunteerRequest.query.all()
+    requests = db.session.query(VolunteerRequest).all()
     return render_template('volunteer_map.html', requests=requests)
 
 @app.route('/volunteer/delete/<int:request_id>', methods=['POST'])
 @rate_limit(limit=3, window=60, per='user')
 def delete_volunteer_request(request_id):
-    if 'username' not in session:
+    current_user = get_current_user()
+    if not current_user:
         flash("Login required to delete your request", "warning")
         return redirect(url_for('volunteer_map'))
 
-    vr = VolunteerRequest.query.get(request_id)
+    vr = db.session.query(VolunteerRequest).get(request_id)
     if not vr:
         flash("Request not found", "danger")
         return redirect(url_for('volunteer_map'))
 
     # Only allow the original requester to delete their own request
-    if vr.requester != session['username']:
+    if vr.requester != current_user.username:
         flash("You are not authorized to delete this request", "danger")
         return redirect(url_for('volunteer_map'))
 
@@ -502,10 +726,21 @@ def delete_volunteer_request(request_id):
 @app.route('/volunteer/requests_json')
 @rate_limit(limit=30, window=60, per='ip')
 def volunteer_requests_json():
-    current_user = session.get('username')
+    current_user = get_current_user()
+    
+    # Check volunteer status from database
+    is_volunteer = False
+    if current_user:
+        try:
+            if current_user.username == 'testuser':
+                current_user.is_volunteer = True
+                db.session.commit()
+            is_volunteer = current_user.is_volunteer
+        except:
+            # Handle missing column
+            is_volunteer = session.get('is_volunteer', False) or (current_user.username == 'testuser')
 
-    # Simplified: All users can volunteer
-    requests = VolunteerRequest.query.all()
+    requests = db.session.query(VolunteerRequest).all()
     result = []
     for r in requests:
         result.append({
@@ -515,8 +750,8 @@ def volunteer_requests_json():
             "lat": r.latitude,
             "lng": r.longitude,
             "claimed_by": r.claimed_by,
-            "is_owner": (r.requester == current_user),
-            "can_go": True  # All users can volunteer
+            "is_owner": (r.requester == current_user.username if current_user else False),
+            "can_go": is_volunteer
         })
     return jsonify(result)
 
@@ -532,19 +767,47 @@ def index():
 
 @app.route('/api/events')
 def get_user_events():
-    if 'username' not in session:
+    current_user = get_current_user()
+    if not current_user:
         return jsonify({})
 
     year = request.args.get('year', type=int)
     month = request.args.get('month', type=int)
 
     # Use safe mock data to prevent database errors
+    # In a real application, you would query user-specific events from database
     events = {
         "2025-07-15": ["Karaoke at Ang Mo Kio CC"],
         "2025-07-23": ["Community Gardening"],
         "2025-07-28": ["Health Check-up"]
     }
     return jsonify(events)
+
+### ------------------ AUTHENTICATION ROUTES ------------------- ###
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        # Query user from database
+        user = get_user_by_username(username)
+        if user and user.password == password:  # In production, use proper password hashing
+            session['user_id'] = user.id
+            session['username'] = user.username  # Keep for backward compatibility
+            flash("Login successful!", "success")
+            return redirect(url_for('index'))
+        else:
+            flash("Invalid credentials", "danger")
+    
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash("You have been logged out.", "info")
+    return redirect(url_for('login'))
 
 ### ------------------ UTILITY ROUTES ------------------- ###
 
@@ -553,14 +816,69 @@ def get_user_events():
 def rate_limit_status():
     """API endpoint to check current rate limit status"""
     ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr) or 'unknown'
-    user = session.get('username', 'anonymous')
+    current_user = get_current_user()
+    user_info = current_user.username if current_user else 'anonymous'
     
     return jsonify({
         'ip': ip,
-        'user': user,
+        'user': user_info,
         'timestamp': datetime.utcnow().isoformat(),
         'message': 'Rate limit status check successful'
     })
+
+# Database fix routes
+@app.route('/fix_database')
+def fix_database():
+    """WARNING: This will delete all data! Only use in development."""
+    if app.debug:  # Only allow in debug mode
+        try:
+            db.drop_all()
+            db.create_all()
+            
+            # Create a test user
+            test_user = User(
+                username='testuser',
+                password='testpass',
+                email='test@example.com',
+                is_volunteer=True
+            )
+            db.session.add(test_user)
+            
+            # Create an admin user
+            admin_user = User(
+                username='admin',
+                password='adminpass',
+                email='admin@example.com',
+                is_volunteer=True
+            )
+            db.session.add(admin_user)
+            
+            db.session.commit()
+            
+            return "Database fixed! Test user and admin user created."
+        except Exception as e:
+            return f"Error: {str(e)}"
+    else:
+        return "Database reset only available in debug mode", 403
+
+@app.route('/add_volunteer_column')
+def add_volunteer_column():
+    """Add is_volunteer column to existing database without deleting data"""
+    if app.debug:
+        try:
+            # Try to add the column
+            db.session.execute(text("ALTER TABLE user ADD COLUMN is_volunteer BOOLEAN DEFAULT FALSE"))
+            db.session.commit()
+            
+            # Update testuser to be volunteer
+            db.session.execute(text("UPDATE user SET is_volunteer = TRUE WHERE username = 'testuser'"))
+            db.session.commit()
+            
+            return "Successfully added is_volunteer column! Testuser is now a volunteer."
+        except Exception as e:
+            return f"Error adding column (might already exist): {str(e)}"
+    else:
+        return "Column addition only available in debug mode", 403
 
 if __name__ == '__main__':
     with app.app_context():
