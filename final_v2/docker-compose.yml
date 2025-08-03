@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: elderly_web
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_APP=__init__.py
+      - SECRET_KEY=your-secret-key-here-change-in-production
+      - MYSQL_HOST=host.docker.internal  # This allows Docker to connect to your host MySQL
+      - MYSQL_USER=flask_user
+      - MYSQL_PASSWORD=Silvers@ge123
+      - MYSQL_DATABASE=flask_db
+    volumes:
+      - ./static/uploads:/app/static/uploads
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # For Docker to access host services
+    command: python __init__.py

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Events{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Manage Events</h1>
+
+    <!-- Add Event Form -->
+    <form
+        action="{{ url_for('admin.event_management') }}"
+        method="POST"
+        enctype="multipart/form-data"
+        id="eventForm"
+    >
+        {{ form.hidden_tag() }}
+
+        <div class="form-group mb-3">
+            {{ form.title.label(class="form-label") }}
+            {{ form.title(class="form-control") }}
+            {% for error in form.title.errors %}
+            <div class="text-danger">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <div class="form-group mb-3">
+            {{ form.description.label(class="form-label") }}
+            {{ form.description(class="form-control") }}
+            {% for error in form.description.errors %}
+            <div class="text-danger">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <div class="form-group mb-3">
+            {{ form.image_file.label(class="form-label") }}
+            {{ form.image_file(class="form-control-file") }}
+            {% for error in form.image_file.errors %}
+            <div class="text-danger">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <button type="submit" class="btn btn-primary">Add Event</button>
+    </form>
+
+    <hr>
+
+    <!-- Existing Events Section -->
+    <h2>Existing Events</h2>
+    <div class="row">
+        {% for event in events %}
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <img src="{{ url_for('static', filename=event.image_file.split('static/')[-1]) }}" class="card-img-top" alt="{{ event.title }}">
+                <div class="card-body">
+                    <h5 class="card-title">{{ event.title }}</h5>
+                    <p class="card-text">{{ event.description }}</p>
+                    <form method="POST" action="{{ url_for('admin.delete_event', event_id=event.event_id) }}">
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    function confirmSignup(eventTitle, formId) {
+        if (confirm(`Are you sure you want to delete the event "${eventTitle}"?`)) {
+            document.getElementById(formId).submit();
+        }
+    }
+</script>
+{% endblock %}

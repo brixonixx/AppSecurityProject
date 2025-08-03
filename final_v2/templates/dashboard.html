@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - SilverSage{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <h1>Welcome, {{ current_user.username }}!</h1>
+    
+    <div style="margin-top: 30px;">
+        <h2>Your Account Information</h2>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
+            <div style="background: var(--light-bg); padding: 20px; border-radius: 8px;">
+                <h3 style="color: var(--primary-color); margin-bottom: 15px;">Profile Details</h3>
+                <p><strong>Name:</strong> 
+                    {% if current_user.first_name or current_user.last_name %}
+                        {{ current_user.first_name }} {{ current_user.last_name }}
+                    {% else %}
+                        Not set
+                    {% endif %}
+                </p>
+                <p><strong>Email:</strong> {{ current_user.email }}</p>
+                <p><strong>Age:</strong> {{ current_user.age or 'Not set' }}</p>
+                <p><strong>Contact:</strong> {{ current_user.contact_number or 'Not set' }}</p>
+            </div>
+            
+            <div style="background: var(--light-bg); padding: 20px; border-radius: 8px;">
+                <h3 style="color: var(--primary-color); margin-bottom: 15px;">Account Status</h3>
+                <p><strong>Member Since:</strong> {{ current_user.created_at.strftime('%B %d, %Y') }}</p>
+                <p><strong>Account Status:</strong> 
+                    <span class="badge badge-active">Active</span>
+                </p>
+            </div>
+        </div>
+        
+        <div style="margin-top: 40px; text-align: center;">
+            <a href="{{ url_for('auth.profile') }}" class="btn btn-primary">
+                Update Profile
+            </a>
+            <a href="{{ url_for('auth.change_password') }}" class="btn btn-success" style="margin-left: 20px;">
+                Change Password
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

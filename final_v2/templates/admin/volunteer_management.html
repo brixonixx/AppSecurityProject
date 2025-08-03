@@ -1,0 +1,503 @@
+<!-- templates/admin/volunteer_management.html -->
+{% extends "base.html" %}
+
+{% block title %}Volunteer Management - Admin - SilverSage{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="page-header">
+        <h1>Volunteer Management</h1>
+        <div class="header-stats">
+            <span class="stat-badge">Total: {{ total_volunteers }}</span>
+            <span class="stat-badge pending">Pending: {{ pending_volunteers }}</span>
+            <span class="stat-badge approved">Approved: {{ approved_volunteers }}</span>
+        </div>
+    </div>
+    
+    <!-- Filter Options -->
+    <div class="filter-bar">
+        <div class="filter-buttons">
+            <a href="{{ url_for('admin.volunteer_management', filter='all') }}" 
+               class="filter-btn {% if filter_by == 'all' %}active{% endif %}">
+                All Volunteers
+            </a>
+            <a href="{{ url_for('admin.volunteer_management', filter='pending') }}" 
+               class="filter-btn {% if filter_by == 'pending' %}active{% endif %}">
+                Pending Approval ({{ pending_volunteers }})
+            </a>
+            <a href="{{ url_for('admin.volunteer_management', filter='approved') }}" 
+               class="filter-btn {% if filter_by == 'approved' %}active{% endif %}">
+                Approved ({{ approved_volunteers }})
+            </a>
+        </div>
+    </div>
+    
+    <!-- Volunteers Table -->
+    <div class="volunteers-table">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Applied Date</th>
+                    <th>Status</th>
+                    <th>Skills</th>
+                    <th>Availability</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for volunteer in volunteers.items %}
+                <tr class="{% if not volunteer.volunteer_approved %}pending-row{% endif %}">
+                    <td>
+                        <strong>{{ volunteer.full_name }}</strong>
+                        <br><small>@{{ volunteer.username }}</small>
+                    </td>
+                    <td>{{ volunteer.email }}</td>
+                    <td>
+                        {% if volunteer.volunteer_applied_at %}
+                            {{ volunteer.volunteer_applied_at.strftime('%Y-%m-%d') }}
+                        {% else %}
+                            <em>N/A</em>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if volunteer.volunteer_approved %}
+                            <span class="badge badge-active">✅ Approved</span>
+                            {% if volunteer.volunteer_approved_at %}
+                                <br><small>{{ volunteer.volunteer_approved_at.strftime('%Y-%m-%d') }}</small>
+                            {% endif %}
+                        {% else %}
+                            <span class="badge badge-warning">⏳ Pending</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if volunteer.volunteer_skills %}
+                            <div class="skills-preview">
+                                {{ volunteer.volunteer_skills[:50] }}
+                                {% if volunteer.volunteer_skills|length > 50 %}...{% endif %}
+                            </div>
+                        {% else %}
+                            <em>Not specified</em>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if volunteer.volunteer_availability %}
+                            {{ volunteer.volunteer_availability }}
+                        {% else %}
+                            <em>Not specified</em>
+                        {% endif %}
+                    </td>
+                    <td class="action-buttons">
+                        <a href="{{ url_for('admin.view_volunteer', volunteer_id=volunteer.id) }}" 
+                           class="btn-small btn-info" title="View Details">👁️</a>
+                        
+                        {% if not volunteer.volunteer_approved %}
+                        <form method="POST" action="{{ url_for('admin.approve_volunteer', volunteer_id=volunteer.id) }}" 
+                              style="display: inline;">
+                            <button type="submit" class="btn-small btn-success" 
+                                    title="Approve Volunteer" onclick="return confirm('Approve this volunteer?')">✅</button>
+                        </form>
+                        {% endif %}
+                        
+                        <form method="POST" action="{{ url_for('admin.revoke_volunteer', volunteer_id=volunteer.id) }}" 
+                              style="display: inline;">
+                            <button type="submit" class="btn-small btn-danger" 
+                                    title="Revoke Volunteer Status" onclick="return confirm('Revoke volunteer status for this user?')">❌</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="no-data">
+                        {% if filter_by == 'pending' %}
+                            No pending volunteer applications.
+                        {% elif filter_by == 'approved' %}
+                            No approved volunteers yet.
+                        {% else %}
+                            No volunteers found.
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <!-- Pagination -->
+        {% if volunteers.pages > 1 %}
+        <div class="pagination">
+            {% if volunteers.has_prev %}
+            <a href="{{ url_for('admin.volunteer_management', page=volunteers.prev_num, filter=filter_by) }}" 
+               class="btn btn-secondary">← Previous</a>
+            {% endif %}
+            
+            <span class="page-info">Page {{ volunteers.page }} of {{ volunteers.pages }}</span>
+            
+            {% if volunteers.has_next %}
+            <a href="{{ url_for('admin.volunteer_management', page=volunteers.next_num, filter=filter_by) }}" 
+               class="btn btn-secondary">Next →</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="back-link">
+        <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-secondary">
+            ← Back to Admin Dashboard
+        </a>
+    </div>
+</div>
+
+<style>
+.header-stats {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.stat-badge {
+    background: var(--primary-color);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.stat-badge.pending {
+    background: var(--warning-color);
+}
+
+.stat-badge.approved {
+    background: var(--success-color);
+}
+
+.filter-bar {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.filter-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    padding: 10px 20px;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--dark-text);
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.filter-btn:hover {
+    border-color: var(--primary-color);
+    background: var(--light-bg);
+}
+
+.filter-btn.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.pending-row {
+    background-color: #fff9e6;
+}
+
+.skills-preview {
+    max-width: 150px;
+    word-wrap: break-word;
+}
+
+.no-data {
+    text-align: center;
+    font-style: italic;
+    color: #666;
+    padding: 40px;
+}
+
+.back-link {
+    margin-top: 30px;
+}
+</style>
+{% endblock %}
+
+<!-- templates/admin/volunteer_details.html -->
+{% extends "base.html" %}
+
+{% block title %}Volunteer Details - {{ volunteer.username }} - SilverSage{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <div class="volunteer-header">
+        <div class="volunteer-info">
+            <h1>{{ volunteer.full_name }}</h1>
+            <p class="volunteer-status">
+                Status: 
+                {% if volunteer.volunteer_approved %}
+                    <span class="badge badge-active">✅ Approved Volunteer</span>
+                {% else %}
+                    <span class="badge badge-warning">⏳ Pending Approval</span>
+                {% endif %}
+            </p>
+        </div>
+        
+        <div class="volunteer-actions">
+            {% if not volunteer.volunteer_approved %}
+            <form method="POST" action="{{ url_for('admin.approve_volunteer', volunteer_id=volunteer.id) }}" 
+                  style="display: inline;">
+                <button type="submit" class="btn btn-success" 
+                        onclick="return confirm('Approve this volunteer?')">
+                    ✅ Approve Volunteer
+                </button>
+            </form>
+            {% endif %}
+            
+            <form method="POST" action="{{ url_for('admin.revoke_volunteer', volunteer_id=volunteer.id) }}" 
+                  style="display: inline;">
+                <button type="submit" class="btn btn-danger" 
+                        onclick="return confirm('Revoke volunteer status for this user?')">
+                    ❌ Revoke Status
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Volunteer Details -->
+    <div class="volunteer-details-grid">
+        <div class="detail-card">
+            <h3>📋 Basic Information</h3>
+            <div class="detail-row">
+                <strong>Username:</strong> {{ volunteer.username }}
+            </div>
+            <div class="detail-row">
+                <strong>Email:</strong> {{ volunteer.email }}
+            </div>
+            <div class="detail-row">
+                <strong>Full Name:</strong> {{ volunteer.full_name }}
+            </div>
+            <div class="detail-row">
+                <strong>Age:</strong> {{ volunteer.age or 'Not specified' }}
+            </div>
+            <div class="detail-row">
+                <strong>Contact:</strong> {{ volunteer.contact_number or 'Not specified' }}
+            </div>
+        </div>
+        
+        <div class="detail-card">
+            <h3>🕒 Application Timeline</h3>
+            <div class="detail-row">
+                <strong>Applied:</strong> 
+                {% if volunteer.volunteer_applied_at %}
+                    {{ volunteer.volunteer_applied_at.strftime('%B %d, %Y at %I:%M %p') }}
+                {% else %}
+                    Not recorded
+                {% endif %}
+            </div>
+            <div class="detail-row">
+                <strong>Approved:</strong> 
+                {% if volunteer.volunteer_approved_at %}
+                    {{ volunteer.volunteer_approved_at.strftime('%B %d, %Y at %I:%M %p') }}
+                {% else %}
+                    Not yet approved
+                {% endif %}
+            </div>
+            <div class="detail-row">
+                <strong>Approved by:</strong> 
+                {% if volunteer.volunteer_approved_by %}
+                    {% set approver = volunteer.volunteer_approver %}
+                    {% if approver %}
+                        {{ approver.username }}
+                    {% else %}
+                        Admin ID: {{ volunteer.volunteer_approved_by }}
+                    {% endif %}
+                {% else %}
+                    N/A
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="detail-card full-width">
+            <h3>💼 Volunteer Information</h3>
+            <div class="detail-row">
+                <strong>Bio/Description:</strong>
+                <div class="detail-content">
+                    {% if volunteer.volunteer_bio %}
+                        {{ volunteer.volunteer_bio }}
+                    {% else %}
+                        <em>No bio provided</em>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="detail-row">
+                <strong>Skills & Expertise:</strong>
+                <div class="detail-content">
+                    {% if volunteer.volunteer_skills %}
+                        {{ volunteer.volunteer_skills }}
+                    {% else %}
+                        <em>No skills specified</em>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="detail-row">
+                <strong>Availability:</strong>
+                <div class="detail-content">
+                    {% if volunteer.volunteer_availability %}
+                        {{ volunteer.volunteer_availability }}
+                    {% else %}
+                        <em>No availability specified</em>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="detail-card">
+            <h3>👤 Account Status</h3>
+            <div class="detail-row">
+                <strong>Account Active:</strong> 
+                {% if volunteer.is_active %}
+                    <span class="badge badge-active">Yes</span>
+                {% else %}
+                    <span class="badge badge-inactive">No</span>
+                {% endif %}
+            </div>
+            <div class="detail-row">
+                <strong>Member Since:</strong> {{ volunteer.created_at.strftime('%B %d, %Y') }}
+            </div>
+            <div class="detail-row">
+                <strong>Last Login:</strong> 
+                {% if volunteer.last_login %}
+                    {{ volunteer.last_login.strftime('%B %d, %Y at %I:%M %p') }}
+                {% else %}
+                    Never
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="detail-card">
+            <h3>🔐 Security Info</h3>
+            <div class="detail-row">
+                <strong>Failed Login Attempts:</strong> {{ volunteer.failed_login_attempts }}
+            </div>
+            {% if volunteer.account_locked_until %}
+            <div class="detail-row">
+                <strong>Account Locked Until:</strong> 
+                <span style="color: var(--danger-color);">
+                    {{ volunteer.account_locked_until.strftime('%B %d, %Y at %I:%M %p') }}
+                </span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="action-buttons">
+        <a href="{{ url_for('admin.edit_user', user_id=volunteer.id) }}" class="btn btn-primary">
+            ✏️ Edit User Profile
+        </a>
+        <a href="{{ url_for('admin.volunteer_management') }}" class="btn btn-secondary">
+            ← Back to Volunteers
+        </a>
+    </div>
+</div>
+
+<style>
+.volunteer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.volunteer-info h1 {
+    margin: 0 0 10px 0;
+    color: var(--primary-color);
+}
+
+.volunteer-status {
+    font-size: 18px;
+    margin: 0;
+}
+
+.volunteer-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.volunteer-details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 25px;
+    margin-bottom: 30px;
+}
+
+.detail-card {
+    background: var(--light-bg);
+    padding: 25px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+}
+
+.detail-card.full-width {
+    grid-column: 1 / -1;
+}
+
+.detail-card h3 {
+    color: var(--primary-color);
+    margin: 0 0 20px 0;
+    font-size: 20px;
+}
+
+.detail-row {
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.detail-row strong {
+    color: var(--dark-text);
+    font-size: 16px;
+}
+
+.detail-content {
+    background: white;
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 30px;
+}
+
+@media (max-width: 768px) {
+    .volunteer-header {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .volunteer-details-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %>

@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Create User - Admin - SilverSage{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h1 style="text-align: center; margin-bottom: 30px; color: var(--primary-color);">
+        Create New User
+    </h1>
+    
+    <form method="POST" action="">
+        {{ form.hidden_tag() }}
+        
+        <div class="form-group">
+            {{ form.username.label }}
+            {{ form.username(class="form-control", placeholder="Choose a username") }}
+            {% for error in form.username.errors %}
+                <span style="color: var(--danger-color); font-size: 16px;">{{ error }}</span>
+            {% endfor %}
+        </div>
+        
+        <div class="form-group">
+            {{ form.email.label }}
+            {{ form.email(class="form-control", placeholder="Enter email address") }}
+            {% for error in form.email.errors %}
+                <span style="color: var(--danger-color); font-size: 16px;">{{ error }}</span>
+            {% endfor %}
+        </div>
+        
+        <div class="form-group">
+            {{ form.password.label }}
+            <div class="password-input-wrapper">
+                {{ form.password(class="form-control password-field", placeholder="Create a strong password", id="admin_password") }}
+                <button type="button" class="password-toggle" aria-label="Show password" title="Show password">
+                    <img src="/static/uploads/eye.png" alt="Show password" width="20" height="20">
+                </button>
+            </div>
+            {% for error in form.password.errors %}
+                <span style="color: var(--danger-color); font-size: 16px;">{{ error }}</span>
+            {% endfor %}
+            <small style="color: #666;">
+                Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.
+            </small>
+        </div>
+        
+        <div class="form-group">
+            {{ form.confirm_password.label }}
+            <div class="password-input-wrapper">
+                {{ form.confirm_password(class="form-control password-field", placeholder="Confirm password", id="admin_confirm_password") }}
+                <button type="button" class="password-toggle" aria-label="Show password" title="Show password">
+                    <img src="/static/uploads/eye.png" alt="Show password" width="20" height="20">
+                </button>
+            </div>
+            {% for error in form.confirm_password.errors %}
+                <span style="color: var(--danger-color); font-size: 16px;">{{ error }}</span>
+            {% endfor %}
+        </div>
+        
+        <!-- Volunteer Options (if available) -->
+        {% if form.is_volunteer %}
+        <div class="form-group">
+            <label style="font-size: 20px;">
+                {{ form.is_volunteer }} Grant Volunteer Status
+            </label>
+            <small style="color: #666; display: block; margin-top: 5px;">
+                Volunteers can help other community members and participate in special activities.
+            </small>
+        </div>
+        {% endif %}
+        
+        {% if form.approve_volunteer %}
+        <div class="form-group" id="approve-volunteer-group" style="display: none;">
+            <label style="font-size: 20px;">
+                {{ form.approve_volunteer }} Approve Volunteer Immediately
+            </label>
+            <small style="color: #666; display: block; margin-top: 5px;">
+                Skip the approval process and activate volunteer privileges immediately.
+            </small>
+        </div>
+        {% endif %}
+        
+        <div class="form-group">
+            <label style="font-size: 20px;">
+                {{ form.is_admin }} Grant Administrator Privileges
+            </label>
+            <small style="color: #666; display: block; margin-top: 5px;">
+                Administrators can manage other users and access system settings.
+            </small>
+        </div>
+        
+        <div class="form-group">
+            {{ form.submit(class="btn btn-primary", style="width: 100%;") }}
+        </div>
+        
+        <p style="text-align: center; margin-top: 20px;">
+            <a href="{{ url_for('admin.user_list') }}" style="color: var(--secondary-color);">
+                ← Back to User List
+            </a>
+        </p>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - SilverSage{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <h1>Your Profile</h1>
+    
+    <div style="text-align: center; margin-bottom: 30px;">
+        <img src="{{ url_for('static', filename='uploads/' + current_user.profile_picture) }}" 
+             alt="Profile Picture" 
+             class="profile-picture">
+    </div>
+    
+    <form method="POST" action="" enctype="multipart/form-data">
+        {{ form.hidden_tag() }}
+        
+        <div class="form-group">
+            <strong>Username:</strong> {{ current_user.username }}
+        </div>
+        
+        <div class="form-group">
+            <strong>Email:</strong> {{ current_user.email }}
+        </div>
+        
+        <div class="form-group">
+            {{ form.first_name.label }}
+            {{ form.first_name(class="form-control") }}
+        </div>
+        
+        <div class="form-group">
+            {{ form.last_name.label }}
+            {{ form.last_name(class="form-control") }}
+        </div>
+        
+        <div class="form-group">
+            {{ form.age.label }}
+            {{ form.age(class="form-control") }}
+        </div>
+        
+        <div class="form-group">
+            {{ form.contact_number.label }}
+            {{ form.contact_number(class="form-control") }}
+        </div>
+        
+        <div class="form-group">
+            {{ form.profile_picture.label }}
+            {{ form.profile_picture(class="form-control") }}
+            <small style="color: #666;">Max file size: 5MB. Allowed formats: JPG, PNG, GIF</small>
+        </div>
+        
+        <div class="form-group">
+            {{ form.submit(class="btn btn-primary") }}
+            <a href="{{ url_for('auth.change_password') }}" class="btn btn-success" style="margin-left: 10px;">
+                Change Password
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}
