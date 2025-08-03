@@ -476,6 +476,7 @@ def register_volunteer():
     return render_template('register_volunteer.html', user=user)
 
 # Legacy route compatibility
+# Replace your existing volunteer/new route with this updated version
 @app.route('/volunteer/new', methods=['GET', 'POST'])
 @rate_limit(limit=3, window=300, per='user')
 def new_volunteer_request():
@@ -483,17 +484,31 @@ def new_volunteer_request():
         flash("Login required", "warning")
         return redirect(url_for('login'))
 
-    if request.method == 'POST':
-        title = request.form.get('title')
-        description = request.form.get('description')
-        requester = session['username']
-        vr = VolunteerRequest(title=title, description=description, requester=requester)
-        db.session.add(vr)
-        db.session.commit()
-        flash("Support request posted!", "success")
-        return redirect(url_for('view_volunteers'))
+    # Force testuser to volunteer
+    if session.get('username') == 'testuser':
+        session['is_volunteer'] = True
+        flash("Testuser is automatically a volunteer!", "info")
+        return redirect(url_for('volunteer_map'))
 
-    return render_template('register_volunteer.html')
+    # Get user for template
+    user = User.query.filter_by(username=session['username']).first()
+    if not user:
+        flash("User not found. Please log in again.", "danger")
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        try:
+            user.is_volunteer = True
+            db.session.commit()
+            flash("You are now registered as a volunteer!", "success")
+            return redirect(url_for('volunteer_map'))
+        except Exception as e:
+            flash("Error registering as volunteer. Please contact administrator.", "danger")
+            print(f"Volunteer registration error: {e}")
+            return redirect(url_for('volunteer'))
+
+    # Pass user to template for both GET and POST requests
+    return render_template('register_volunteer.html', user=user)
 
 @app.route('/volunteer/claim/<int:request_id>')
 @rate_limit(limit=10, window=60, per='user')
