@@ -493,7 +493,7 @@ def new_volunteer_request():
         flash("Support request posted!", "success")
         return redirect(url_for('view_volunteers'))
 
-    return render_template('new_volunteer.html')
+    return render_template('register_volunteer.html')
 
 @app.route('/volunteer/claim/<int:request_id>')
 @rate_limit(limit=10, window=60, per='user')
