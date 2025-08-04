@@ -93,10 +93,10 @@ def create_app():
         return render_template('home.html')
 
 
-@app.route('/faq')
-def faq_page():
-    """FAQ page with accessibility support"""
-    return render_template('faq.html')
+    @app.route('/faq')
+    def faq_page():
+        """FAQ page with accessibility support"""
+        return render_template('faq.html')
 
     @app.route('/test-db')
     def test_db():
