@@ -24,33 +24,154 @@
 
       function addMarker(request) {
         const marker = L.marker([request.lat, request.lng]).addTo(map);
-        let popupContent = `<b>${request.title}</b><br>${request.description}
-          <br><button class="btn btn-success btn-sm mt-2" onclick="goToRequest(${request.id})">Go To</button>`;
+        
+        // Enhanced popup with more information and actions
+        let popupContent = `<b>${request.title}</b><br>${request.description}`;
+        
+        if (request.requester) {
+          popupContent += `<br><small class="text-info">Requested by: ${request.requester}</small>`;
+        }
+        
+        if (request.claimed_by) {
+          popupContent += `<br><small class="text-warning">Claimed by: ${request.claimed_by}</small>`;
+        }
+        
+        // Add action buttons for volunteers
+        if (request.can_go) {
+          popupContent += `<br><div class="mt-2">`;
+          
+          if (!request.claimed_by) {
+            popupContent += `<button class="btn btn-warning btn-sm me-1" onclick="claimRequest(${request.id})">Claim</button>`;
+          }
+          
+          popupContent += `<button class="btn btn-success btn-sm" onclick="goToRequest(${request.id})">Go To</button>`;
+          
+          // Allow deletion of own requests
+          if (request.is_owner) {
+            popupContent += `<button class="btn btn-danger btn-sm ms-1" onclick="deleteRequest(${request.id})">Delete</button>`;
+          }
+          
+          popupContent += `</div>`;
+        }
+        
         marker.bindPopup(popupContent);
         markers[request.id] = marker;
       }
 
-      fetch('{{ url_for("volunteer_requests_json") }}')
+      // Load and display help requests - KEEPING ORIGINAL functionality
+      fetch('{{ url_for("volunteer.volunteer_requests_json") }}')
         .then(res => res.json())
         .then(data => {
-          data.forEach(req => {
-            if (req.lat && req.lng) addMarker(req);
-          });
+          if (data.length === 0) {
+            status.textContent = "No help requests currently active.";
+          } else {
+            status.textContent = `Showing ${data.length} help request(s).`;
+            data.forEach(req => {
+              if (req.lat && req.lng) addMarker(req);
+            });
+          }
+        })
+        .catch(error => {
+          status.textContent = "Error loading help requests.";
+          console.error('Error fetching requests:', error);
         });
 
+      // KEEPING ORIGINAL goToRequest function with backend integration
       window.goToRequest = function (requestId) {
         if (!confirm("Do you want to accept this request and remove it?")) return;
-        fetch(`/volunteer/go/${requestId}`, { method: 'DELETE' })
-          .then(res => res.json())
-          .then(result => {
-            if (result.success) {
+        
+        fetch(`{{ url_for('volunteer.volunteer_go_to_request', request_id=0) }}`.replace('0', requestId), { 
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        })
+        .then(res => res.json())
+        .then(result => {
+          if (result.success) {
+            if (markers[requestId]) {
               map.removeLayer(markers[requestId]);
               delete markers[requestId];
-              status.textContent = "You accepted the request!";
-            } else {
-              status.textContent = result.error || "Failed to accept request.";
             }
-          });
+            status.textContent = "You accepted the request!";
+            
+            // Update the status message count
+            const remainingCount = Object.keys(markers).length;
+            if (remainingCount === 0) {
+              status.textContent += " No more requests available.";
+            } else {
+              status.textContent += ` ${remainingCount} request(s) remaining.`;
+            }
+          } else {
+            status.textContent = result.error || "Failed to accept request.";
+          }
+        })
+        .catch(error => {
+          console.error('Error accepting request:', error);
+          status.textContent = "Error accepting request.";
+        });
+      };
+
+      // New function to claim requests
+      window.claimRequest = function (requestId) {
+        if (!confirm("Do you want to claim this request?")) return;
+        
+        fetch(`{{ url_for('volunteer.claim_volunteer_request', request_id=0) }}`.replace('0', requestId), { 
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        })
+        .then(res => {
+          if (res.ok) {
+            status.textContent = "Request claimed! Refreshing map...";
+            // Refresh the page to show updated claim status
+            setTimeout(() => {
+              window.location.reload();
+            }, 1000);
+          } else {
+            status.textContent = "Failed to claim request.";
+          }
+        })
+        .catch(error => {
+          console.error('Error claiming request:', error);
+          status.textContent = "Error claiming request.";
+        });
+      };
+
+      // New function to delete own requests
+      window.deleteRequest = function (requestId) {
+        if (!confirm("Are you sure you want to delete your help request?")) return;
+        
+        fetch(`{{ url_for('volunteer.delete_volunteer_request', request_id=0) }}`.replace('0', requestId), { 
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        })
+        .then(res => {
+          if (res.ok) {
+            if (markers[requestId]) {
+              map.removeLayer(markers[requestId]);
+              delete markers[requestId];
+            }
+            status.textContent = "Your request has been deleted.";
+            
+            // Update the status message count
+            const remainingCount = Object.keys(markers).length;
+            if (remainingCount === 0) {
+              status.textContent += " No more requests available.";
+            } else {
+              status.textContent += ` ${remainingCount} request(s) remaining.`;
+            }
+          } else {
+            status.textContent = "Failed to delete request.";
+          }
+        })
+        .catch(error => {
+          console.error('Error deleting request:', error);
+          status.textContent = "Error deleting request.";
+        });
       };
     });
   </script>
