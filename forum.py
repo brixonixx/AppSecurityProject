@@ -1,20 +1,8 @@
 # forum.py - Forum routes and functionality
 from flask import render_template, request, redirect, url_for, flash, session, Blueprint
 from flask_login import login_required, current_user
-from models import *
+from models import db, Post, Comment
 import logging
-
-from flask import Flask, render_template, request, session, redirect, url_for, flash, jsonify
-from markupsafe import escape
-from flask_sqlalchemy import SQLAlchemy
-from wtforms import Form, StringField, TextAreaField, IntegerField, validators
-from datetime import datetime, timedelta
-import uuid
-import os
-from sqlalchemy import text
-from functools import wraps
-from collections import defaultdict
-import time
 
 forum = Blueprint('forum', __name__)
 
@@ -24,13 +12,19 @@ forum = Blueprint('forum', __name__)
 def list_posts():
     try:
         posts = Post.query.order_by(Post.id.desc()).all()
+
+        # Add comment count for display in forum.html
+        for post in posts:
+            post.comment_count = Comment.query.filter_by(post_id=post.id).count()
+
     except Exception as e:
         db.session.rollback()
-        logging.exception(f"An exception occurred when trying to retrieve posts: {e}")
+        logging.exception(f"Error retrieving posts: {e}")
         flash("An error occurred when trying to retrieve posts", "danger")
         posts = []
     
     return render_template('forum.html', posts=posts)
+
 
 @forum.route("/post/<int:post_id>")
 def view_post(post_id):
@@ -39,11 +33,12 @@ def view_post(post_id):
         comments = Comment.query.filter_by(post_id=post_id).order_by(Comment.created_at.asc()).all()
     except Exception as e:
         db.session.rollback()
-        logging.exception(f"An exception occurred when trying to retrieve post {post_id}: {e}")
+        logging.exception(f"Error retrieving post {post_id}: {e}")
         flash("An error occurred when trying to retrieve the post", "danger")
         return redirect(url_for('forum.list_posts'))
     
     return render_template('post_detail.html', post=post, comments=comments)
+
 
 @forum.route("/new", methods=['GET', 'POST'])
 @login_required
@@ -57,8 +52,7 @@ def new_post():
                 flash("Title and content are required", "warning")
                 return render_template('new_post.html')
             
-            author = current_user.username  # Using current_user instead of session
-            post = Post(title=title, content=content, author=author)
+            post = Post(title=title, content=content, author=current_user.username)
             db.session.add(post)
             db.session.commit()
             flash("Post created successfully!", "success")
@@ -66,43 +60,11 @@ def new_post():
             
         except Exception as e:
             db.session.rollback()
-            logging.exception(f"An exception occurred when creating a new post: {e}")
+            logging.exception(f"Error creating new post: {e}")
             flash("An error occurred when creating the post", "danger")
 
     return render_template('new_post.html')
 
-@forum.route("/edit/<int:post_id>", methods=['GET', 'POST'])
-@login_required
-def edit_post(post_id):
-    try:
-        post = Post.query.get_or_404(post_id)
-
-        # Ensure only the author can edit
-        if post.author != current_user.username:
-            flash("You are not authorized to edit this post.", "danger")
-            return redirect(url_for('forum.view_post', post_id=post_id))
-
-        if request.method == 'POST':
-            title = request.form.get('title')
-            content = request.form.get('content')
-            
-            if not title or not content:
-                flash("Title and content are required", "warning")
-                return render_template('edit_post.html', post=post)
-            
-            post.title = title
-            post.content = content
-            db.session.commit()
-            flash("Post updated successfully!", "success")
-            return redirect(url_for('forum.view_post', post_id=post_id))
-
-    except Exception as e:
-        db.session.rollback()
-        logging.exception(f"An exception occurred when editing post {post_id}: {e}")
-        flash("An error occurred when editing the post", "danger")
-        return redirect(url_for('forum.list_posts'))
-
-    return render_template('edit_post.html', post=post)
 
 @forum.route("/delete/<int:post_id>", methods=['POST'])
 @login_required
@@ -110,7 +72,6 @@ def delete_post(post_id):
     try:
         post = Post.query.get_or_404(post_id)
 
-        # Ensure only the author can delete
         if post.author != current_user.username:
             flash("You are not authorized to delete this post.", "danger")
             return redirect(url_for('forum.list_posts'))
@@ -121,10 +82,11 @@ def delete_post(post_id):
         
     except Exception as e:
         db.session.rollback()
-        logging.exception(f"An exception occurred when deleting post {post_id}: {e}")
+        logging.exception(f"Error deleting post {post_id}: {e}")
         flash("An error occurred when deleting the post", "danger")
 
     return redirect(url_for('forum.list_posts'))
+
 
 ### ------------------ COMMENT ROUTES ------------------- ###
 
@@ -136,11 +98,7 @@ def add_comment(post_id):
         comment_content = request.form.get('comment')
         
         if comment_content and comment_content.strip():
-            comment = Comment(
-                content=comment_content.strip(),
-                author=current_user.username,
-                post_id=post_id
-            )
+            comment = Comment(content=comment_content.strip(), author=current_user.username, post_id=post_id)
             db.session.add(comment)
             db.session.commit()
             flash("Comment added successfully!", "success")
@@ -149,10 +107,11 @@ def add_comment(post_id):
             
     except Exception as e:
         db.session.rollback()
-        logging.exception(f"An exception occurred when adding comment to post {post_id}: {e}")
+        logging.exception(f"Error adding comment to post {post_id}: {e}")
         flash("An error occurred when adding the comment", "danger")
 
     return redirect(url_for('forum.view_post', post_id=post_id))
+
 
 @forum.route("/comment/delete/<int:comment_id>", methods=['POST'])
 @login_required
@@ -161,7 +120,6 @@ def delete_comment(comment_id):
         comment = Comment.query.get_or_404(comment_id)
         post_id = comment.post_id
 
-        # Ensure only the comment author can delete
         if comment.author != current_user.username:
             flash("You are not authorized to delete this comment.", "danger")
             return redirect(url_for('forum.view_post', post_id=post_id))
@@ -172,7 +130,7 @@ def delete_comment(comment_id):
         
     except Exception as e:
         db.session.rollback()
-        logging.exception(f"An exception occurred when deleting comment {comment_id}: {e}")
+        logging.exception(f"Error deleting comment {comment_id}: {e}")
         flash("An error occurred when deleting the comment", "danger")
 
     return redirect(url_for('forum.view_post', post_id=post_id))
