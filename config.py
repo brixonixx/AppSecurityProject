@@ -117,3 +117,74 @@ class Config:
         print("="*60)
         
         return len(google_issues) == 0
+    
+    # SMTP Email Configuration for sending emails to ALL users
+    MAIL_SERVER = 'smtp.gmail.com'
+    MAIL_PORT = 587
+    MAIL_USE_TLS = True
+    MAIL_USE_SSL = False
+    MAIL_USERNAME = os.environ.get('SMTP_EMAIL')  # Your Gmail address
+    MAIL_PASSWORD = os.environ.get('SMTP_PASSWORD')  # Your Gmail App Password
+    MAIL_DEFAULT_SENDER = os.environ.get('SMTP_EMAIL')
+    
+    # Admin email for system notifications
+    ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'admin@silversage.com')
+    
+    @classmethod
+    def validate_email_config(cls):
+        """Validate email configuration"""
+        issues = []
+        
+        if not cls.MAIL_USERNAME:
+            issues.append("SMTP_EMAIL not set in environment variables")
+        elif not cls.MAIL_USERNAME.endswith('@gmail.com'):
+            issues.append("SMTP_EMAIL should be a Gmail address")
+        
+        if not cls.MAIL_PASSWORD:
+            issues.append("SMTP_PASSWORD not set in environment variables")
+        elif len(cls.MAIL_PASSWORD) < 16:
+            issues.append("SMTP_PASSWORD appears too short (should be Gmail App Password)")
+        
+        return issues
+    
+    @classmethod
+    def print_config_status(cls):
+        """Print configuration status for debugging"""
+        print("\n" + "="*60)
+        print("🔧 SilverSage Configuration Status")
+        print("="*60)
+        
+        # Database config
+        print(f"📍 Database Host: {cls.MYSQL_HOST}")
+        print(f"📍 Database Name: {cls.MYSQL_DATABASE}")
+        print(f"📍 Database User: {cls.MYSQL_USER}")
+        
+        # Google OAuth config
+        google_issues = cls.validate_google_oauth()
+        if google_issues:
+            print(f"❌ Google OAuth Issues:")
+            for issue in google_issues:
+                print(f"   - {issue}")
+        else:
+            print(f"✅ Google OAuth: Properly configured")
+            print(f"   Client ID: {cls.GOOGLE_CLIENT_ID[:20]}...")
+            print(f"   Client Secret: {'*' * 20}...")
+        
+        # Email config
+        email_issues = cls.validate_email_config()
+        if email_issues:
+            print(f"❌ Email Configuration Issues:")
+            for issue in email_issues:
+                print(f"   - {issue}")
+        else:
+            print(f"✅ SMTP Email: Properly configured")
+            print(f"   Email: {cls.MAIL_USERNAME}")
+            print(f"   Server: {cls.MAIL_SERVER}:{cls.MAIL_PORT}")
+        
+        # File upload config
+        print(f"📁 Upload Folder: {cls.UPLOAD_FOLDER}")
+        print(f"📏 Max File Size: {cls.MAX_CONTENT_LENGTH // (1024*1024)}MB")
+        
+        print("="*60)
+        
+        return len(google_issues) == 0 and len(email_issues) == 0

@@ -183,6 +183,92 @@ class User(UserMixin, db.Model):
         self.volunteer_approved_at = None
         self.volunteer_approved_by = None
     
+    def is_account_locked(self):
+        """Check if account is currently locked"""
+        if self.account_locked_until and self.account_locked_until > datetime.utcnow():
+            return True
+        return False
+    
+    def get_lockout_time_remaining(self):
+        """Get remaining lockout time as timedelta"""
+        if self.account_locked_until and self.account_locked_until > datetime.utcnow():
+            return self.account_locked_until - datetime.utcnow()
+        return None
+    
+    def check_password_with_lockout_info(self, password):
+        """
+        Enhanced password check that returns detailed lockout information
+        Returns dict with success status and lockout details
+        """
+        MAX_ATTEMPTS = 5
+        LOCKOUT_DURATION = 30  # minutes
+        
+        # Check if already locked
+        if self.is_account_locked():
+            return {
+                'success': False,
+                'account_locked': True,
+                'failed_attempts': self.failed_login_attempts,
+                'max_attempts': MAX_ATTEMPTS,
+                'lockout_duration': LOCKOUT_DURATION,
+                'time_remaining': self.get_lockout_time_remaining()
+            }
+        
+        try:
+            # Verify password using your existing method
+            stored = bytes.fromhex(self.password_hash)
+            salt = stored[:32]
+            stored_hash = stored[32:]
+            pwdhash = hashlib.pbkdf2_hmac('sha256',
+                                          password.encode('utf-8'),
+                                          salt,
+                                          100000)
+            
+            if pwdhash == stored_hash:
+                # Successful login
+                previous_failures = self.failed_login_attempts
+                self.failed_login_attempts = 0
+                self.last_failed_login = None
+                self.account_locked_until = None
+                self.last_login = datetime.utcnow()
+                
+                return {
+                    'success': True,
+                    'previous_failures': previous_failures,
+                    'failed_attempts': 0,
+                    'max_attempts': MAX_ATTEMPTS
+                }
+            else:
+                # Failed login
+                self.failed_login_attempts += 1
+                self.last_failed_login = datetime.utcnow()
+                
+                account_just_locked = False
+                if self.failed_login_attempts >= MAX_ATTEMPTS:
+                    self.account_locked_until = datetime.utcnow() + timedelta(minutes=LOCKOUT_DURATION)
+                    account_just_locked = True
+                
+                return {
+                    'success': False,
+                    'account_locked': account_just_locked,
+                    'failed_attempts': self.failed_login_attempts,
+                    'max_attempts': MAX_ATTEMPTS,
+                    'lockout_duration': LOCKOUT_DURATION
+                }
+                
+        except Exception as e:
+            # Error in password checking
+            self.failed_login_attempts += 1
+            self.last_failed_login = datetime.utcnow()
+            
+            return {
+                'success': False,
+                'account_locked': False,
+                'failed_attempts': self.failed_login_attempts,
+                'max_attempts': MAX_ATTEMPTS,
+                'error': str(e)
+            }
+
     @property
     def volunteer_status(self):
         """Get volunteer status as string"""

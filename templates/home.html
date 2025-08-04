@@ -22,10 +22,10 @@
             <p>View your account statistics and activity</p>
         </a>
         
-        <a href="{{ url_for('auth.change_password') }}" class="action-card">
+        <a href="{{ url_for('auth.security_settings') }}" class="action-card">
             <div class="action-icon">🔐</div>
             <h3>Security Settings</h3>
-            <p>Change your password and security preferences</p>
+            <p>Manage passwords, 2FA, and security preferences</p>
         </a>
         
         {% if current_user.is_admin %}

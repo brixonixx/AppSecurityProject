@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+
+{% block title %}Disable Two-Factor Authentication - SilverSage{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h1>⚠️ Disable Two-Factor Authentication</h1>
+    <p class="form-subtitle">Remove the extra security layer from your account</p>
+    
+    <div class="warning-section">
+        <div class="warning-card">
+            <div class="warning-icon">🚨</div>
+            <div class="warning-content">
+                <h3>Security Warning</h3>
+                <p>Disabling two-factor authentication will make your account less secure. Anyone with your password will be able to access your account.</p>
+                <p><strong>Are you sure you want to continue?</strong></p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="reasons-section">
+        <h3>Consider these alternatives first:</h3>
+        <div class="alternatives-grid">
+            <div class="alternative-card">
+                <h4>📧 Email Issues?</h4>
+                <p>If you're having trouble receiving emails, try checking your spam folder or updating your email address.</p>
+                <a href="{{ url_for('auth.profile') }}" class="btn btn-info btn-small">Update Email</a>
+            </div>
+            <div class="alternative-card">
+                <h4>🔑 Lost Backup Codes?</h4>
+                <p>Contact our support team to help you regain access without disabling 2FA completely.</p>
+                <a href="#" class="btn btn-info btn-small">Contact Support</a>
+            </div>
+        </div>
+    </div>
+    
+    <form method="POST">
+        <div class="confirmation-section">
+            <h3>To disable 2FA, please confirm:</h3>
+            
+            <div class="form-group">
+                <label for="password">Enter your current password:</label>
+                <div class="password-input-wrapper">
+                    <input type="password" 
+                           id="password" 
+                           name="password" 
+                           class="form-control password-field" 
+                           required
+                           placeholder="Enter your password">
+                    <button type="button" class="password-toggle" onclick="togglePassword('password')" aria-label="Show password">
+                        <img src="/static/uploads/eye.png" alt="Show password" width="20" height="20">
+                    </button>
+                </div>
+            </div>
+            
+            <div class="checkbox-group">
+                <input type="checkbox" id="understand" name="understand" required>
+                <label for="understand">
+                    I understand that disabling 2FA will make my account less secure
+                </label>
+            </div>
+            
+            <div class="checkbox-group">
+                <input type="checkbox" id="confirm" name="confirm" required>
+                <label for="confirm">
+                    I want to disable two-factor authentication for my account
+                </label>
+            </div>
+        </div>
+        
+        <div class="form-group action-buttons">
+            <button type="submit" class="btn btn-danger">Disable 2FA</button>
+            <a href="{{ url_for('auth.security_settings') }}" class="btn btn-success">Keep 2FA Enabled</a>
+        </div>
+    </form>
+    
+    <div class="help-section">
+        <h3>Need Help?</h3>
+        <p>If you're having trouble with 2FA, our support team can help you resolve issues without compromising your account security.</p>
+        <div class="help-actions">
+            <a href="#" class="btn btn-secondary">📧 Email Support</a>
+            <a href="#" class="btn btn-secondary">📞 Call Support</a>
+        </div>
+    </div>
+</div>
+
+<style>
+.warning-section {
+    margin-bottom: 30px;
+}
+
+.warning-card {
+    background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+    border: 2px solid var(--danger-color);
+    border-radius: 12px;
+    padding: 25px;
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+}
+
+.warning-icon {
+    font-size: 48px;
+    flex-shrink: 0;
+}
+
+.warning-content h3 {
+    color: var(--danger-color);
+    margin-bottom: 15px;
+    font-size: 20px;
+}
+
+.warning-content p {
+    color: #721c24;
+    margin-bottom: 10px;
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+.reasons-section {
+    background: var(--light-bg);
+    border-radius: 8px;
+    padding: 25px;
+    margin-bottom: 30px;
+}
+
+.reasons-section h3 {
+    color: var(--primary-color);
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.alternatives-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.alternative-card {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.alternative-card h4 {
+    color: var(--primary-color);
+    margin-bottom: 10px;
+    font-size: 16px;
+}
+
+.alternative-card p {
+    color: #666;
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 15px;
+}
+
+.btn-small {
+    padding: 8px 16px;
+    font-size: 14px;
+    min-width: auto;
+}
+
+.confirmation-section {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    padding: 25px;
+    margin-bottom: 25px;
+}
+
+.confirmation-section h3 {
+    color: #856404;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 15px;
+    background: white;
+    padding: 15px;
+    border-radius: 6px;
+    border-left: 4px solid var(--warning-color);
+}
+
+.checkbox-group input[type="checkbox"] {
+    margin-top: 4px;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.checkbox-group label {
+    font-size: 16px;
+    line-height: 1.5;
+    margin: 0;
+    color: var(--dark-text);
+}
+
+.action-buttons {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    align-items: center;
+}
+
+.action-buttons .btn-danger {
+    order: 2;
+}
+
+.action-buttons .btn-success {
+    order: 1;
+    font-weight: bold;
+}
+
+.help-section {
+    background: var(--light-bg);
+    padding: 25px;
+    border-radius: 8px;
+    text-align: center;
+    margin-top: 30px;
+}
+
+.help-section h3 {
+    color: var(--primary-color);
+    margin-bottom: 15px;
+}
+
+.help-section p {
+    color: #666;
+    margin-bottom: 20px;
+    font-size: 16px;
+}
+
+.help-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+    .warning-card {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .warning-icon {
+        margin: 0 auto 15px auto;
+    }
+    
+    .alternatives-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+    }
+    
+    .action-buttons .btn {
+        width: 100%;
+        order: unset !important;
+    }
+    
+    .help-actions {
+        flex-direction: column;
+    }
+    
+    .help-actions .btn {
+        width: 100%;
+    }
+}
+</style>
+
+<script>
+// Confirm before submitting
+document.querySelector('form').addEventListener('submit', function(e) {
+    const confirmed = confirm(
+        'Are you absolutely sure you want to disable two-factor authentication?\n\n' +
+        'This will make your account less secure.\n\n' +
+        'Click OK to disable 2FA, or Cancel to keep it enabled.'
+    );
+    
+    if (!confirmed) {
+        e.preventDefault();
+    }
+});
+
+// Visual feedback for checkboxes
+const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+const submitBtn = document.querySelector('button[type="submit"]');
+
+function updateSubmitButton() {
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    const passwordFilled = document.getElementById('password').value.length > 0;
+    
+    if (allChecked && passwordFilled) {
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = '1';
+    } else {
+        submitBtn.disabled = true;
+        submitBtn.style.opacity = '0.6';
+    }
+}
+
+checkboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', updateSubmitButton);
+});
+
+document.getElementById('password').addEventListener('input', updateSubmitButton);
+
+// Initial state
+updateSubmitButton();
+</script>
+{% endblock %}

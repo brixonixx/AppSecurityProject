@@ -1,0 +1,375 @@
+{% extends "base.html" %}
+
+{% block title %}Two-Factor Authentication - SilverSage{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h1>🔐 Two-Factor Authentication</h1>
+    <p class="form-subtitle">Enter the security code to complete your login</p>
+    
+    <div class="email-info">
+        <div class="email-card">
+            <div class="email-icon">📧</div>
+            <div class="email-content">
+                <h3>Check Your Email</h3>
+                <p>We've sent a 6-digit security code to:</p>
+                <p><strong>{{ user.email }}</strong></p>
+                <p class="expire-note">This code expires in 10 minutes</p>
+            </div>
+        </div>
+    </div>
+    
+    <form method="POST">
+        {{ form.hidden_tag() }}
+        
+        <div class="form-group">
+            {{ form.code.label }}
+            {{ form.code(class="form-control code-input", placeholder="000000", autocomplete="one-time-code") }}
+            {% for error in form.code.errors %}
+                <span class="error-text">{{ error }}</span>
+            {% endfor %}
+            <div class="input-help">Enter the 6-digit code from your email</div>
+        </div>
+        
+        <div class="backup-code-section">
+            <details>
+                <summary>Can't access your email? Use a backup code</summary>
+                <div class="backup-content">
+                    <div class="form-group">
+                        {{ form.backup_code.label }}
+                        {{ form.backup_code(class="form-control backup-input", placeholder="12345678") }}
+                        {% for error in form.backup_code.errors %}
+                            <span class="error-text">{{ error }}</span>
+                        {% endfor %}
+                        <div class="input-help">Enter one of your 8-digit backup codes</div>
+                    </div>
+                    
+                    <div class="backup-warning">
+                        <p><strong>Note:</strong> Each backup code can only be used once. After using a backup code, consider generating new ones.</p>
+                    </div>
+                </div>
+            </details>
+        </div>
+        
+        <div class="form-group">
+            {{ form.submit(class="btn btn-primary") }}
+        </div>
+    </form>
+    
+    <div class="help-section">
+        <h3>Having trouble?</h3>
+        <div class="help-grid">
+            <div class="help-item">
+                <h4>📧 Email not received?</h4>
+                <ul>
+                    <li>Check your spam/junk folder</li>
+                    <li>Wait a few minutes for delivery</li>
+                    <li>Make sure your email address is correct</li>
+                </ul>
+            </div>
+            <div class="help-item">
+                <h4>🔑 Lost backup codes?</h4>
+                <ul>
+                    <li>Contact our support team</li>
+                    <li>Have your account information ready</li>
+                    <li>We'll help verify your identity</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="support-contact">
+            <p>Need immediate help? Contact support:</p>
+            <div class="contact-buttons">
+                <a href="mailto:support@silversage.com" class="btn btn-secondary btn-small">📧 Email</a>
+                <a href="tel:1-800-SILVER-SAGE" class="btn btn-secondary btn-small">📞 Call</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="back-to-login">
+        <a href="{{ url_for('auth.login') }}">&larr; Back to Login</a>
+    </div>
+</div>
+
+<style>
+.email-info {
+    margin-bottom: 30px;
+}
+
+.email-card {
+    background: linear-gradient(135deg, #e6f3ff, #cce7ff);
+    border: 1px solid var(--info-color);
+    border-radius: 12px;
+    padding: 25px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.email-icon {
+    font-size: 48px;
+    flex-shrink: 0;
+}
+
+.email-content h3 {
+    color: var(--info-color);
+    margin-bottom: 10px;
+    font-size: 20px;
+}
+
+.email-content p {
+    margin-bottom: 5px;
+    font-size: 16px;
+    color: var(--dark-text);
+}
+
+.expire-note {
+    color: #856404;
+    font-weight: 600;
+    font-size: 14px !important;
+}
+
+.code-input {
+    font-family: 'Courier New', monospace;
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+    letter-spacing: 8px;
+    padding: 20px;
+}
+
+.backup-code-section {
+    background: var(--light-bg);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 25px;
+}
+
+.backup-code-section details {
+    cursor: pointer;
+}
+
+.backup-code-section summary {
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 16px;
+    padding: 10px;
+    border-radius: 6px;
+    transition: background-color 0.3s;
+}
+
+.backup-code-section summary:hover {
+    background-color: rgba(44, 82, 130, 0.1);
+}
+
+.backup-content {
+    padding: 20px 10px 10px 10px;
+    border-top: 1px solid #dee2e6;
+    margin-top: 15px;
+}
+
+.backup-input {
+    font-family: 'Courier New', monospace;
+    font-size: 18px;
+    font-weight: bold;
+    text-align: center;
+    letter-spacing: 4px;
+}
+
+.backup-warning {
+    background: #fff3cd;
+    border-left: 4px solid var(--warning-color);
+    padding: 15px;
+    border-radius: 4px;
+    margin-top: 15px;
+}
+
+.backup-warning p {
+    margin: 0;
+    color: #856404;
+    font-size: 14px;
+}
+
+.input-help {
+    font-size: 14px;
+    color: #666;
+    text-align: center;
+    margin-top: 8px;
+}
+
+.help-section {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 25px;
+    margin-top: 30px;
+}
+
+.help-section h3 {
+    color: var(--primary-color);
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.help-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 25px;
+    margin-bottom: 25px;
+}
+
+.help-item h4 {
+    color: var(--primary-color);
+    margin-bottom: 10px;
+    font-size: 16px;
+}
+
+.help-item ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.help-item li {
+    margin-bottom: 5px;
+    font-size: 14px;
+    color: #666;
+}
+
+.support-contact {
+    text-align: center;
+    padding-top: 20px;
+    border-top: 1px solid #dee2e6;
+}
+
+.support-contact p {
+    margin-bottom: 15px;
+    color: #666;
+    font-size: 16px;
+}
+
+.contact-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn-small {
+    padding: 8px 16px;
+    font-size: 14px;
+    min-width: auto;
+}
+
+.back-to-login {
+    text-align: center;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+.back-to-login a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-size: 16px;
+}
+
+.back-to-login a:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+    .email-card {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .email-icon {
+        margin-bottom: 15px;
+    }
+    
+    .code-input {
+        font-size: 20px;
+        letter-spacing: 4px;
+    }
+    
+    .backup-input {
+        font-size: 16px;
+        letter-spacing: 2px;
+    }
+    
+    .help-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .contact-buttons {
+        flex-direction: column;
+    }
+    
+    .contact-buttons .btn {
+        width: 100%;
+    }
+}
+</style>
+
+<script>
+// Auto-format code input
+document.querySelector('.code-input').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+    if (value.length > 6) {
+        value = value.slice(0, 6);
+    }
+    e.target.value = value;
+    
+    // Clear backup code when main code is entered
+    if (value.length > 0) {
+        document.querySelector('.backup-input').value = '';
+    }
+    
+    // Auto-submit when complete (optional)
+    if (value.length === 6) {
+        setTimeout(function() {
+            document.querySelector('form').submit();
+        }, 500);
+    }
+});
+
+// Auto-format backup code input
+document.querySelector('.backup-input').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+    if (value.length > 8) {
+        value = value.slice(0, 8);
+    }
+    e.target.value = value;
+    
+    // Clear main code when backup code is entered
+    if (value.length > 0) {
+        document.querySelector('.code-input').value = '';
+    }
+    
+    // Auto-submit when complete (optional)
+    if (value.length === 8) {
+        setTimeout(function() {
+            document.querySelector('form').submit();
+        }, 500);
+    }
+});
+
+// Focus on code input when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelector('.code-input').focus();
+});
+
+// Prevent form submission if both fields are empty
+document.querySelector('form').addEventListener('submit', function(e) {
+    const code = document.querySelector('.code-input').value.trim();
+    const backupCode = document.querySelector('.backup-input').value.trim();
+    
+    if (!code && !backupCode) {
+        e.preventDefault();
+        alert('Please enter either a verification code or a backup code.');
+        document.querySelector('.code-input').focus();
+    }
+});
+</script>
+{% endblock %}

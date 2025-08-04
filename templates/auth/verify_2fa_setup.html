@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block title %}Verify 2FA Setup - SilverSage{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h1>📧 Verify Your Email</h1>
+    <p class="form-subtitle">Enter the 6-digit code we sent to {{ current_user.email }}</p>
+    
+    <div class="verification-info">
+        <div class="email-sent-card">
+            <div class="email-icon">📬</div>
+            <h3>Email Sent!</h3>
+            <p>We've sent a verification code to:</p>
+            <p><strong>{{ current_user.email }}</strong></p>
+            <p class="expiry-info">This code will expire in 10 minutes.</p>
+        </div>
+    </div>
+    
+    <form method="POST">
+        <div class="form-group">
+            <label for="code">Enter Verification Code:</label>
+            <input type="text" 
+                   id="code" 
+                   name="code" 
+                   class="form-control code-input" 
+                   placeholder="000000"
+                   maxlength="6"
+                   pattern="[0-9]{6}"
+                   required
+                   autocomplete="one-time-code">
+            <div class="input-help">Enter the 6-digit code from your email</div>
+        </div>
+        
+        <div class="form-group">
+            <button type="submit" class="btn btn-success">Verify & Enable 2FA</button>
+            <a href="{{ url_for('auth.security_settings') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+    
+    <div class="help-section">
+        <h3>Didn't receive the email?</h3>
+        <div class="help-steps">
+            <p>✅ Check your spam/junk folder</p>
+            <p>✅ Make sure {{ current_user.email }} is correct</p>
+            <p>✅ Wait a few minutes - emails can be delayed</p>
+        </div>
+        
+        <div class="resend-section">
+            <p>Still having trouble?</p>
+            <a href="{{ url_for('simple_google_auth.enable_2fa') }}" class="btn btn-info">Try Again</a>
+        </div>
+    </div>
+</div>
+
+<style>
+.verification-info {
+    margin-bottom: 30px;
+}
+
+.email-sent-card {
+    background: linear-gradient(135deg, #d4edda, #c3e6cb);
+    border: 1px solid var(--success-color);
+    border-radius: 12px;
+    padding: 25px;
+    text-align: center;
+}
+
+.email-icon {
+    font-size: 48px;
+    margin-bottom: 15px;
+}
+
+.email-sent-card h3 {
+    color: var(--success-color);
+    margin-bottom: 15px;
+    font-size: 24px;
+}
+
+.email-sent-card p {
+    margin-bottom: 8px;
+    font-size: 16px;
+}
+
+.expiry-info {
+    color: #856404;
+    font-weight: 600;
+    background: #fff3cd;
+    padding: 8px 15px;
+    border-radius: 6px;
+    margin-top: 15px;
+    display: inline-block;
+}
+
+.code-input {
+    font-family: 'Courier New', monospace;
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+    letter-spacing: 8px;
+    padding: 20px;
+}
+
+.input-help {
+    font-size: 14px;
+    color: #666;
+    text-align: center;
+    margin-top: 8px;
+}
+
+.help-section {
+    background: var(--light-bg);
+    padding: 25px;
+    border-radius: 8px;
+    margin-top: 30px;
+}
+
+.help-section h3 {
+    color: var(--primary-color);
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.help-steps {
+    margin-bottom: 20px;
+}
+
+.help-steps p {
+    margin-bottom: 8px;
+    font-size: 16px;
+}
+
+.resend-section {
+    text-align: center;
+    padding-top: 20px;
+    border-top: 1px solid #dee2e6;
+}
+
+.resend-section p {
+    margin-bottom: 15px;
+    color: #666;
+}
+
+@media (max-width: 768px) {
+    .code-input {
+        font-size: 20px;
+        letter-spacing: 4px;
+    }
+    
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .form-group .btn {
+        width: 100%;
+    }
+}
+</style>
+
+<script>
+// Auto-format code input
+document.getElementById('code').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+    if (value.length > 6) {
+        value = value.slice(0, 6);
+    }
+    e.target.value = value;
+    
+    // Auto-submit when complete
+    if (value.length === 6) {
+        // Optional: auto-submit after a short delay
+        setTimeout(function() {
+            if (confirm('Code entered. Submit now?')) {
+                document.querySelector('form').submit();
+            }
+        }, 500);
+    }
+});
+
+// Focus on code input when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('code').focus();
+});
+</script>
+{% endblock %}

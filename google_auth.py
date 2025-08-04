@@ -1,6 +1,7 @@
-# google_auth.py - FIXED with correct Google OAuth discovery endpoint
+# google_auth.py - Updated with Gmail API support for 2FA and Universal Email Service integration
 """
-Fixed Google OAuth integration with correct discovery endpoint and manual fallback
+Enhanced Google OAuth integration with Gmail API support for 2FA
+Now supports universal email service for ALL users
 """
 
 import os
@@ -8,11 +9,25 @@ import secrets
 import requests
 import json
 import time
+import base64
 from urllib.parse import urlencode
-from flask import Blueprint, request, redirect, url_for, session, flash, current_app
-from flask_login import login_user, current_user
-from models import db, User
+from flask import Blueprint, request, redirect, url_for, session, flash, current_app, render_template
+from flask_login import login_user, current_user, login_required
+from models import db, User, TwoFactorAuth
 from security import log_security_event
+from datetime import datetime, timedelta
+from email_service import EmailService
+
+# FIXED: Correct email imports for Python 3.13
+try:
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+except ImportError:
+    # Fallback for any other Python version issues
+    from email.mime import text as mime_text_module
+    from email.mime import multipart as mime_multipart_module
+    MIMEText = mime_text_module.MIMEText
+    MIMEMultipart = mime_multipart_module.MIMEMultipart
 
 # Create the Google auth blueprint
 simple_google_auth = Blueprint('simple_google_auth', __name__)
@@ -21,11 +36,12 @@ simple_google_auth = Blueprint('simple_google_auth', __name__)
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
 
-# FIXED: Updated discovery URLs and manual endpoints as fallback
-GOOGLE_DISCOVERY_URLS = [
-    "https://accounts.google.com/.well-known/openid_configuration",
-    "https://accounts.google.com/.well-known/openid-configuration",  # Alternative
-    "https://www.googleapis.com/oauth2/v3/certs"  # Another endpoint to try
+# UPDATED: OAuth scopes to include Gmail
+OAUTH_SCOPES = [
+    'openid',
+    'email', 
+    'profile',
+    'https://www.googleapis.com/auth/gmail.send'  # Added Gmail send permission
 ]
 
 # Manual endpoint configuration as fallback
@@ -39,14 +55,20 @@ MANUAL_GOOGLE_ENDPOINTS = {
 def get_google_provider_cfg(max_retries=3, timeout=15):
     """Get Google's OAuth configuration with fallback to manual endpoints"""
     
-    # First try the discovery endpoints
-    for discovery_url in GOOGLE_DISCOVERY_URLS:
+    # Discovery URLs to try
+    discovery_urls = [
+        "https://accounts.google.com/.well-known/openid_configuration",
+        "https://accounts.google.com/.well-known/openid-configuration"
+    ]
+    
+    # Try discovery endpoints first
+    for discovery_url in discovery_urls:
         for attempt in range(max_retries):
             try:
                 current_app.logger.info(f"Trying discovery URL: {discovery_url} (attempt {attempt + 1}/{max_retries})")
                 
                 headers = {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                    'User-Agent': 'SilverSage/1.0.0 Flask OAuth Client',
                     'Accept': 'application/json',
                     'Accept-Encoding': 'gzip, deflate',
                     'Connection': 'keep-alive'
@@ -58,8 +80,6 @@ def get_google_provider_cfg(max_retries=3, timeout=15):
                     headers=headers,
                     verify=True
                 )
-                
-                current_app.logger.info(f"Response status: {response.status_code}")
                 
                 if response.status_code == 200:
                     try:
@@ -81,135 +101,96 @@ def get_google_provider_cfg(max_retries=3, timeout=15):
                     time.sleep(1)
             except requests.exceptions.RequestException as e:
                 current_app.logger.warning(f"Request error for {discovery_url}: {e}")
-                break  # Try next URL
+                break
             except Exception as e:
                 current_app.logger.warning(f"Unexpected error for {discovery_url}: {e}")
                 break
     
-    # If all discovery attempts failed, use manual endpoints
+    # Use manual endpoints as fallback
     current_app.logger.info("All discovery endpoints failed, using manual configuration")
-    
-    # Test that our manual endpoints are reachable
-    try:
-        test_response = requests.head(MANUAL_GOOGLE_ENDPOINTS['authorization_endpoint'], timeout=5)
-        if test_response.status_code < 500:  # Any response except server error is good
-            current_app.logger.info("Manual endpoints appear reachable, using fallback configuration")
-            return MANUAL_GOOGLE_ENDPOINTS
-    except Exception as e:
-        current_app.logger.error(f"Even manual endpoints are unreachable: {e}")
-    
-    return None
+    return MANUAL_GOOGLE_ENDPOINTS
 
 @simple_google_auth.route('/auth/google')
 def google_login():
-    """Initiate Google OAuth login with enhanced error handling"""
+    """Initiate Google OAuth login with Gmail permissions"""
     
-    # Configuration checks
-    if not GOOGLE_CLIENT_ID:
-        current_app.logger.error("GOOGLE_CLIENT_ID not configured")
-        flash('Google OAuth is not configured - missing Client ID. Please contact an administrator.', 'error')
+    if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+        flash('Google OAuth is not configured. Please contact an administrator.', 'error')
         return redirect(url_for('auth.login'))
-    
-    if not GOOGLE_CLIENT_SECRET:
-        current_app.logger.error("GOOGLE_CLIENT_SECRET not configured")
-        flash('Google OAuth is not configured - missing Client Secret. Please contact an administrator.', 'error')
-        return redirect(url_for('auth.login'))
-    
-    current_app.logger.info(f"Initiating Google OAuth with Client ID: {GOOGLE_CLIENT_ID[:10]}...")
     
     try:
-        # Get Google's configuration
         google_provider_cfg = get_google_provider_cfg()
         
         if not google_provider_cfg:
-            current_app.logger.error("Could not fetch Google OAuth configuration")
-            flash('Google authentication service is currently unavailable. This may be due to network issues or temporary Google service problems. Please try again later.', 'error')
+            flash('Google authentication service is currently unavailable. Please try again later.', 'error')
             return redirect(url_for('auth.login'))
         
         authorization_endpoint = google_provider_cfg.get("authorization_endpoint")
         if not authorization_endpoint:
-            current_app.logger.error("No authorization endpoint in Google config")
-            flash('Google authentication configuration is invalid - missing authorization endpoint.', 'error')
+            flash('Google authentication configuration is invalid.', 'error')
             return redirect(url_for('auth.login'))
         
         # Generate state for security
         state = secrets.token_urlsafe(32)
         session['oauth_state'] = state
-        current_app.logger.info(f"Generated OAuth state: {state[:10]}...")
         
-        # Build authorization URL
+        # Build authorization URL with Gmail scope
         redirect_uri = url_for('simple_google_auth.google_callback', _external=True)
-        current_app.logger.info(f"Using redirect URI: {redirect_uri}")
         
         params = {
             'client_id': GOOGLE_CLIENT_ID,
             'redirect_uri': redirect_uri,
-            'scope': 'openid email profile',
+            'scope': ' '.join(OAUTH_SCOPES),  # Updated with Gmail scope
             'response_type': 'code',
             'state': state,
-            'access_type': 'offline',
-            'prompt': 'consent'
+            'access_type': 'offline',  # Important for refresh tokens
+            'prompt': 'consent'  # Force consent to get refresh token
         }
         
         authorization_url = authorization_endpoint + '?' + urlencode(params)
-        current_app.logger.info(f"Redirecting to: {authorization_url[:100]}...")
         
-        log_security_event('Google OAuth login initiated')
+        log_security_event('Google OAuth login initiated with Gmail permissions')
         return redirect(authorization_url)
         
     except Exception as e:
-        current_app.logger.error(f"Unexpected error in google_login: {str(e)}")
-        flash('An unexpected error occurred while setting up Google login. Please try again or use regular login.', 'error')
+        current_app.logger.error(f"Error in google_login: {str(e)}")
+        flash('An error occurred while setting up Google login. Please try again.', 'error')
         return redirect(url_for('auth.login'))
 
 @simple_google_auth.route('/auth/google/callback')
 def google_callback():
-    """Handle Google OAuth callback with comprehensive error handling"""
+    """Handle Google OAuth callback"""
     try:
-        current_app.logger.info("Google OAuth callback received")
-        current_app.logger.info(f"Request args: {dict(request.args)}")
-        
         # Verify state parameter
         received_state = request.args.get('state')
         stored_state = session.get('oauth_state')
         
         if received_state != stored_state:
-            current_app.logger.error(f"OAuth state mismatch")
             flash('Security validation failed. Please try logging in again.', 'error')
             return redirect(url_for('auth.login'))
         
-        # Handle OAuth error responses
+        # Handle OAuth errors
         if 'error' in request.args:
             error = request.args.get('error')
-            error_description = request.args.get('error_description', '')
-            current_app.logger.error(f"OAuth error from Google: {error} - {error_description}")
-            
             if error == 'access_denied':
-                flash('You cancelled the Google login. You can try again or use regular login.', 'info')
+                flash('You cancelled the Google login.', 'info')
             else:
-                flash(f'Google authentication failed: {error_description or error}', 'error')
+                flash(f'Google authentication failed: {error}', 'error')
             return redirect(url_for('auth.login'))
         
         # Get authorization code
         code = request.args.get('code')
         if not code:
-            current_app.logger.error("No authorization code received from Google")
-            flash('No authorization code received from Google. Please try again.', 'error')
+            flash('No authorization code received from Google.', 'error')
             return redirect(url_for('auth.login'))
-        
-        current_app.logger.info(f"Received authorization code: {code[:10]}...")
         
         # Get Google's configuration
         google_provider_cfg = get_google_provider_cfg()
         if not google_provider_cfg:
-            flash('Google authentication service unavailable during token exchange. Please try again.', 'error')
+            flash('Google authentication service unavailable during token exchange.', 'error')
             return redirect(url_for('auth.login'))
         
         token_endpoint = google_provider_cfg.get("token_endpoint")
-        if not token_endpoint:
-            current_app.logger.error("No token endpoint in Google config")
-            flash('Google authentication configuration error. Please try again.', 'error')
-            return redirect(url_for('auth.login'))
         
         # Exchange code for tokens
         token_data = {
@@ -220,92 +201,40 @@ def google_callback():
             'redirect_uri': url_for('simple_google_auth.google_callback', _external=True)
         }
         
-        current_app.logger.info("Exchanging authorization code for tokens...")
-        
-        # Try token exchange with retry
-        for attempt in range(3):
-            try:
-                token_response = requests.post(
-                    token_endpoint, 
-                    data=token_data, 
-                    timeout=15,
-                    headers={'User-Agent': 'SilverSage/1.0.0 Flask OAuth Client'}
-                )
-                token_response.raise_for_status()
-                break
-            except requests.exceptions.Timeout:
-                if attempt < 2:
-                    current_app.logger.warning(f"Token exchange timeout, attempt {attempt + 1}/3")
-                    time.sleep(2)
-                else:
-                    raise
-            except requests.exceptions.ConnectionError:
-                if attempt < 2:
-                    current_app.logger.warning(f"Token exchange connection error, attempt {attempt + 1}/3")
-                    time.sleep(2)
-                else:
-                    raise
-        
+        token_response = requests.post(token_endpoint, data=token_data, timeout=15)
+        token_response.raise_for_status()
         tokens = token_response.json()
-        current_app.logger.info(f"Token response received with keys: {list(tokens.keys())}")
         
         if 'error' in tokens:
-            error_msg = tokens.get("error_description", tokens.get("error", "Unknown error"))
-            current_app.logger.error(f"Token exchange error: {error_msg}")
-            flash(f'Google authentication failed during token exchange: {error_msg}', 'error')
+            flash(f'Token exchange failed: {tokens.get("error_description", "Unknown error")}', 'error')
             return redirect(url_for('auth.login'))
         
-        if 'access_token' not in tokens:
-            current_app.logger.error("No access token in response")
-            flash('Failed to get access token from Google. Please try again.', 'error')
-            return redirect(url_for('auth.login'))
-        
-        # Get user info from Google
+        # Get user info
         userinfo_endpoint = google_provider_cfg.get("userinfo_endpoint", MANUAL_GOOGLE_ENDPOINTS['userinfo_endpoint'])
         
-        headers = {
-            'Authorization': f'Bearer {tokens["access_token"]}',
-            'User-Agent': 'SilverSage/1.0.0 Flask OAuth Client'
-        }
-        
-        current_app.logger.info("Fetching user info from Google...")
-        
-        for attempt in range(3):
-            try:
-                userinfo_response = requests.get(userinfo_endpoint, headers=headers, timeout=10)
-                userinfo_response.raise_for_status()
-                break
-            except requests.exceptions.Timeout:
-                if attempt < 2:
-                    current_app.logger.warning(f"User info fetch timeout, attempt {attempt + 1}/3")
-                    time.sleep(1)
-                else:
-                    raise
-        
+        headers = {'Authorization': f'Bearer {tokens["access_token"]}'}
+        userinfo_response = requests.get(userinfo_endpoint, headers=headers, timeout=10)
+        userinfo_response.raise_for_status()
         userinfo = userinfo_response.json()
-        current_app.logger.info(f"User info received with keys: {list(userinfo.keys())}")
         
-        # Extract and validate user information
+        # Extract user information
         google_id = userinfo.get('sub') or userinfo.get('id')
         email = userinfo.get('email')
         first_name = userinfo.get('given_name', '')
         last_name = userinfo.get('family_name', '')
         
-        current_app.logger.info(f"User email from Google: {email}")
-        
         if not email:
-            current_app.logger.error("No email in Google user info")
-            flash('Could not get email from your Google account. Please ensure your Google account has an email address.', 'error')
+            flash('Could not get email from your Google account.', 'error')
             return redirect(url_for('auth.login'))
         
         # Create or update user
         user = User.query.filter_by(email=email).first()
         
         if user:
-            # Existing user - update Google info
+            # Update existing user with new tokens
             user.google_id = google_id
             user.google_access_token = tokens.get('access_token')
-            user.google_refresh_token = tokens.get('refresh_token')
+            user.google_refresh_token = tokens.get('refresh_token')  # This is crucial for Gmail API
             user.email_verified = True
             
             db.session.commit()
@@ -317,7 +246,7 @@ def google_callback():
             # Create new user
             username = email.split('@')[0]
             
-            # Ensure username is unique
+            # Ensure unique username
             counter = 1
             original_username = username
             while User.query.filter_by(username=username).first():
@@ -336,7 +265,6 @@ def google_callback():
                 email_verified=True
             )
             
-            # Set a random password
             user.set_password(secrets.token_urlsafe(32))
             
             db.session.add(user)
@@ -351,163 +279,302 @@ def google_callback():
         
         return redirect(url_for('dashboard'))
         
-    except requests.exceptions.Timeout as e:
-        current_app.logger.error(f"Timeout during OAuth callback: {str(e)}")
-        flash('Google authentication timed out. Please check your internet connection and try again.', 'error')
-        return redirect(url_for('auth.login'))
-    except requests.exceptions.ConnectionError as e:
-        current_app.logger.error(f"Connection error during OAuth callback: {str(e)}")
-        flash('Network error during Google authentication. Please check your internet connection and try again.', 'error')
-        return redirect(url_for('auth.login'))
     except Exception as e:
-        current_app.logger.error(f"Unexpected error in OAuth callback: {str(e)}")
-        flash('An unexpected error occurred during Google authentication. Please try again or use regular login.', 'error')
+        current_app.logger.error(f"Error in OAuth callback: {str(e)}")
+        flash('An error occurred during Google authentication.', 'error')
         return redirect(url_for('auth.login'))
 
-# Simple password reset functionality
-@simple_google_auth.route('/auth/forgot-password', methods=['GET', 'POST'])
-def forgot_password():
-    """Simple password reset request"""
-    if request.method == 'POST':
-        email = request.form.get('email', '').strip().lower()
-        user = User.query.filter_by(email=email).first()
-        
-        if user:
-            reset_token = secrets.token_urlsafe(32)
-            session[f'reset_token_{email}'] = {
-                'token': reset_token,
-                'expires': 'implement_expiry_logic'
-            }
-            flash(f'Password reset initiated. Token: {reset_token} (This is for development only)', 'info')
-            
-        flash('If an account with that email exists, a password reset link has been sent.', 'info')
-        return redirect(url_for('auth.login'))
+def refresh_google_token(user):
+    """Refresh Google access token using refresh token"""
+    if not user.google_refresh_token:
+        return False
     
-    return '''
-    <div style="max-width: 400px; margin: 50px auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
-        <h2>Reset Password</h2>
-        <form method="POST">
-            <div style="margin-bottom: 15px;">
-                <label for="email">Email Address:</label><br>
-                <input type="email" name="email" id="email" required style="width: 100%; padding: 8px; margin-top: 5px;">
-            </div>
-            <button type="submit" style="background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">Send Reset Link</button>
-            <a href="''' + url_for('auth.login') + '''" style="margin-left: 10px;">Back to Login</a>
-        </form>
-    </div>
-    '''
+    try:
+        token_data = {
+            'client_id': GOOGLE_CLIENT_ID,
+            'client_secret': GOOGLE_CLIENT_SECRET,
+            'refresh_token': user.google_refresh_token,
+            'grant_type': 'refresh_token'
+        }
+        
+        response = requests.post(
+            'https://oauth2.googleapis.com/token',
+            data=token_data,
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            tokens = response.json()
+            user.google_access_token = tokens.get('access_token')
+            
+            # Sometimes a new refresh token is provided
+            if 'refresh_token' in tokens:
+                user.google_refresh_token = tokens['refresh_token']
+            
+            db.session.commit()
+            return True
+        else:
+            current_app.logger.error(f"Token refresh failed: {response.text}")
+            return False
+            
+    except Exception as e:
+        current_app.logger.error(f"Error refreshing token: {str(e)}")
+        return False
 
-# Enhanced debug route with network testing
+def send_2fa_email(user, code):
+    """Send 2FA code via Gmail API (legacy function - kept for compatibility)"""
+    if not user.google_access_token:
+        current_app.logger.error("No Google access token for user")
+        return False
+    
+    try:
+        # Create email message
+        message = MIMEMultipart()
+        message['To'] = user.email
+        message['From'] = user.email  # Send from user's own email
+        message['Subject'] = 'SilverSage - Your Security Code'
+        
+        # Email body
+        body = f"""
+        Hello {user.first_name or user.username},
+        
+        Your SilverSage security code is: {code}
+        
+        This code will expire in 10 minutes.
+        
+        If you didn't request this code, please contact support immediately.
+        
+        Best regards,
+        The SilverSage Team
+        """
+        
+        message.attach(MIMEText(body, 'plain'))
+        
+        # Encode message
+        raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode('utf-8')
+        
+        # Send via Gmail API
+        gmail_url = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send'
+        headers = {
+            'Authorization': f'Bearer {user.google_access_token}',
+            'Content-Type': 'application/json'
+        }
+        
+        data = {
+            'raw': raw_message
+        }
+        
+        response = requests.post(gmail_url, headers=headers, json=data, timeout=15)
+        
+        # If token expired, try to refresh
+        if response.status_code == 401:
+            current_app.logger.info("Access token expired, attempting refresh")
+            if refresh_google_token(user):
+                # Retry with new token
+                headers['Authorization'] = f'Bearer {user.google_access_token}'
+                response = requests.post(gmail_url, headers=headers, json=data, timeout=15)
+            else:
+                current_app.logger.error("Failed to refresh token")
+                return False
+        
+        if response.status_code == 200:
+            current_app.logger.info(f"2FA email sent successfully to {user.email}")
+            return True
+        else:
+            current_app.logger.error(f"Gmail API error: {response.status_code} - {response.text}")
+            return False
+            
+    except Exception as e:
+        current_app.logger.error(f"Error sending 2FA email: {str(e)}")
+        return False
+
+# =============================================================================
+# 2FA Management Routes - Updated to use Universal Email Service
+# =============================================================================
+
+@simple_google_auth.route('/security/enable-2fa', methods=['GET', 'POST'])
+@login_required
+def enable_2fa():
+    """Enable 2FA for user account using universal email service"""
+    if current_user.has_2fa_enabled():
+        flash('Two-factor authentication is already enabled.', 'info')
+        return redirect(url_for('auth.security_settings'))
+    
+    if request.method == 'POST':
+        # Generate test code
+        test_code = f"{secrets.randbelow(1000000):06d}"
+        
+        # Create or get 2FA record
+        two_fa = current_user.two_factor_auth
+        if not two_fa:
+            two_fa = TwoFactorAuth(user_id=current_user.id)
+            db.session.add(two_fa)
+        
+        two_fa.temp_code = test_code
+        two_fa.temp_code_expires = datetime.utcnow() + timedelta(minutes=10)
+        
+        # Generate backup codes
+        backup_codes = [f"{secrets.randbelow(100000000):08d}" for _ in range(10)]
+        two_fa.backup_codes = ','.join(backup_codes)
+        
+        db.session.commit()
+        
+        # Use universal EmailService instead of Google-specific sending
+        if EmailService.send_2fa_code_email(current_user, test_code):
+            session['2fa_setup_user_id'] = current_user.id
+            flash('A test verification code has been sent to your email.', 'info')
+            return redirect(url_for('simple_google_auth.verify_2fa_setup'))
+        else:
+            flash('Failed to send verification email. Please try again or contact support.', 'error')
+            log_security_event(f'2FA setup email failed: {current_user.username}', success=False)
+    
+    return render_template('auth/enable_2fa.html')
+
+@simple_google_auth.route('/security/verify-2fa-setup', methods=['GET', 'POST'])
+@login_required
+def verify_2fa_setup():
+    """Verify 2FA setup with test code"""
+    if '2fa_setup_user_id' not in session:
+        flash('No 2FA setup session found.', 'error')
+        return redirect(url_for('auth.security_settings'))
+    
+    if current_user.has_2fa_enabled():
+        flash('Two-factor authentication is already enabled.', 'info')
+        return redirect(url_for('auth.security_settings'))
+    
+    if request.method == 'POST':
+        code = request.form.get('code', '').strip()
+        two_fa = current_user.two_factor_auth
+        
+        if two_fa and two_fa.verify_temp_code(code):
+            # Enable 2FA
+            two_fa.is_enabled = True
+            two_fa.temp_code = None
+            two_fa.temp_code_expires = None
+            db.session.commit()
+            
+            # Clear session
+            session.pop('2fa_setup_user_id', None)
+            
+            log_security_event(f'2FA enabled for user: {current_user.username}')
+            flash('Two-factor authentication has been successfully enabled!', 'success')
+            
+            # Show backup codes
+            backup_codes = two_fa.backup_codes.split(',')
+            return render_template('auth/2fa_enabled.html', backup_codes=backup_codes)
+        else:
+            flash('Invalid or expired verification code.', 'error')
+            log_security_event(f'Invalid 2FA setup code: {current_user.username}', success=False)
+    
+    return render_template('auth/verify_2fa_setup.html')
+
+@simple_google_auth.route('/security/disable-2fa', methods=['GET', 'POST'])
+@login_required
+def disable_2fa():
+    """Disable 2FA for user account"""
+    if not current_user.has_2fa_enabled():
+        flash('Two-factor authentication is not enabled.', 'info')
+        return redirect(url_for('auth.security_settings'))
+    
+    if request.method == 'POST':
+        password = request.form.get('password', '')
+        confirm = request.form.get('confirm')
+        
+        if not confirm:
+            flash('You must confirm that you understand the security implications.', 'error')
+            return render_template('auth/disable_2fa.html')
+        
+        if current_user.check_password(password):
+            # Disable 2FA
+            two_fa = current_user.two_factor_auth
+            if two_fa:
+                db.session.delete(two_fa)
+                db.session.commit()
+            
+            log_security_event(f'2FA disabled for user: {current_user.username}')
+            flash('Two-factor authentication has been disabled. Your account is now less secure.', 'warning')
+            return redirect(url_for('auth.security_settings'))
+        else:
+            flash('Incorrect password.', 'error')
+            log_security_event(f'Failed 2FA disable attempt: {current_user.username}', success=False)
+    
+    return render_template('auth/disable_2fa.html')
+
+@simple_google_auth.route('/security/regenerate-backup-codes', methods=['POST'])
+@login_required
+def regenerate_backup_codes():
+    """Regenerate backup codes for 2FA"""
+    if not current_user.has_2fa_enabled():
+        flash('Two-factor authentication is not enabled.', 'error')
+        return redirect(url_for('auth.security_settings'))
+    
+    two_fa = current_user.two_factor_auth
+    if two_fa:
+        # Generate new backup codes
+        backup_codes = [f"{secrets.randbelow(100000000):08d}" for _ in range(10)]
+        two_fa.backup_codes = ','.join(backup_codes)
+        db.session.commit()
+        
+        log_security_event(f'2FA backup codes regenerated: {current_user.username}')
+        flash('New backup codes have been generated. Please save them securely.', 'success')
+        
+        return render_template('auth/2fa_enabled.html', backup_codes=backup_codes)
+    
+    flash('Error regenerating backup codes.', 'error')
+    return redirect(url_for('auth.security_settings'))
+
+# =============================================================================
+# Legacy and Debug Routes
+# =============================================================================
+
 @simple_google_auth.route('/auth/google/debug')
 def google_debug():
-    """Enhanced debug route with network diagnostics"""
+    """Debug route for Google OAuth configuration"""
     if not current_app.debug:
         return "Debug route only available in debug mode", 403
+    
+    # Test Gmail API access for current user
+    gmail_status = "Not available"
+    if current_user.is_authenticated and current_user.google_access_token:
+        try:
+            headers = {'Authorization': f'Bearer {current_user.google_access_token}'}
+            response = requests.get(
+                'https://gmail.googleapis.com/gmail/v1/users/me/profile',
+                headers=headers,
+                timeout=10
+            )
+            if response.status_code == 200:
+                gmail_status = "✅ Gmail API accessible"
+            elif response.status_code == 401:
+                gmail_status = "🔄 Token needs refresh"
+            else:
+                gmail_status = f"❌ Error: {response.status_code}"
+        except Exception as e:
+            gmail_status = f"❌ Exception: {str(e)}"
+    
+    # Test Universal Email Service
+    email_service_status = "Not tested"
+    if current_user.is_authenticated:
+        success, message = EmailService.test_email_configuration()
+        email_service_status = f"{'✅' if success else '❌'} {message}"
     
     config_status = {
         'GOOGLE_CLIENT_ID': 'Set' if GOOGLE_CLIENT_ID else 'Not set',
         'GOOGLE_CLIENT_SECRET': 'Set' if GOOGLE_CLIENT_SECRET else 'Not set',
-        'GOOGLE_CLIENT_ID_LENGTH': len(GOOGLE_CLIENT_ID) if GOOGLE_CLIENT_ID else 0,
-        'GOOGLE_CLIENT_SECRET_LENGTH': len(GOOGLE_CLIENT_SECRET) if GOOGLE_CLIENT_SECRET else 0,
+        'OAUTH_SCOPES': OAUTH_SCOPES,
+        'GMAIL_API_STATUS': gmail_status,
+        'UNIVERSAL_EMAIL_SERVICE': email_service_status,
+        'USER_2FA_STATUS': current_user.has_2fa_enabled() if current_user.is_authenticated else 'Not logged in'
     }
     
-    # Test Google discovery endpoint and manual fallback
-    try:
-        start_time = time.time()
-        
-        # Test basic connectivity first
-        basic_test_url = 'https://google.com'
-        try:
-            basic_response = requests.get(basic_test_url, timeout=5)
-            basic_connectivity = f'✅ Success ({basic_response.status_code})'
-        except Exception as e:
-            basic_connectivity = f'❌ Error: {str(e)}'
-        
-        config_status['BASIC_CONNECTIVITY'] = basic_connectivity
-        
-        # Test our configuration function
-        google_config = get_google_provider_cfg()
-        end_time = time.time()
-        
-        if google_config:
-            config_status['GOOGLE_DISCOVERY'] = f'✅ Available ({end_time - start_time:.2f}s)'
-            config_status['ENDPOINTS'] = {
-                'authorization_endpoint': google_config.get('authorization_endpoint', 'Missing'),
-                'token_endpoint': google_config.get('token_endpoint', 'Missing'),
-                'userinfo_endpoint': google_config.get('userinfo_endpoint', 'Missing'),
-                'source': 'Manual Fallback' if google_config == MANUAL_GOOGLE_ENDPOINTS else 'Discovery'
-            }
-        else:
-            config_status['GOOGLE_DISCOVERY'] = f'❌ Failed ({end_time - start_time:.2f}s)'
-            config_status['DISCOVERY_DETAILS'] = {
-                'error': 'All discovery URLs and manual endpoints failed',
-                'tested_urls': GOOGLE_DISCOVERY_URLS,
-                'manual_endpoints': MANUAL_GOOGLE_ENDPOINTS
-            }
-                
-    except Exception as e:
-        config_status['GOOGLE_DISCOVERY'] = f'❌ Error: {str(e)}'
-    
-    # Generate HTML response with better formatting
-    html_response = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Google OAuth Debug Information</title>
-        <style>
-            body {{ font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }}
-            .success {{ color: #28a745; }}
-            .error {{ color: #dc3545; }}
-            .warning {{ color: #ffc107; }}
-            .info {{ background: #e9ecef; padding: 15px; border-radius: 5px; margin: 10px 0; }}
-            pre {{ background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; }}
-            .diagnostic {{ background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0; }}
-        </style>
-    </head>
-    <body>
-        <h1>🔧 Google OAuth Debug Information</h1>
-        
-        <div class="info">
-            <h3>Configuration Status</h3>
-            <ul>
-                <li>Client ID: <span class="{'success' if config_status['GOOGLE_CLIENT_ID'] == 'Set' else 'error'}">{config_status['GOOGLE_CLIENT_ID']}</span></li>
-                <li>Client Secret: <span class="{'success' if config_status['GOOGLE_CLIENT_SECRET'] == 'Set' else 'error'}">{config_status['GOOGLE_CLIENT_SECRET']}</span></li>
-                <li>Basic Connectivity: <span class="{'success' if '✅' in config_status.get('BASIC_CONNECTIVITY', '') else 'error'}">{config_status.get('BASIC_CONNECTIVITY', 'Not tested')}</span></li>
-                <li>Google Configuration: <span class="{'success' if '✅' in config_status.get('GOOGLE_DISCOVERY', '') else 'error'}">{config_status.get('GOOGLE_DISCOVERY', 'Not tested')}</span></li>
-            </ul>
-        </div>
-        
-        <div class="diagnostic">
-            <h3>🎉 GOOD NEWS!</h3>
-            <p>This version uses <strong>manual fallback endpoints</strong> that should work even if Google's discovery endpoint is having issues.</p>
-            <ol>
-                <li><strong>If Configuration shows ✅:</strong> Google OAuth should now work! Try the login flow.</li>
-                <li><strong>If still having issues:</strong> Check the Flask application logs for detailed error messages.</li>
-                <li><strong>Test the flow:</strong> Click "Start Google OAuth Flow" below to test.</li>
-            </ol>
-        </div>
-        
-        <h3>Full Debug Information</h3>
-        <pre>{json.dumps(config_status, indent=2)}</pre>
-        
-        <div class="info">
-            <h3>Test URLs</h3>
-            <ul>
-                <li><a href="{url_for('simple_google_auth.google_login')}" target="_blank">🚀 Start Google OAuth Flow</a></li>
-                <li><a href="{url_for('auth.login')}">Back to Login Page</a></li>
-                <li><a href="/test-db">System Status Page</a></li>
-            </ul>
-        </div>
-        
-        <p><strong>⚠️ Important:</strong> Remove this debug route in production!</p>
-    </body>
-    </html>
+    return f"""
+    <h1>Google OAuth & Email Debug</h1>
+    <pre>{json.dumps(config_status, indent=2)}</pre>
+    <h2>Available Routes:</h2>
+    <ul>
+        <li><a href="{url_for('simple_google_auth.google_login')}">Test Google Login</a></li>
+        <li><a href="{url_for('auth.security_settings')}">Security Settings</a></li>
+        <li><a href="{url_for('auth.test_2fa')}">Test 2FA Email</a></li>
+        <li><a href="{url_for('auth.login')}">Back to Login</a></li>
+    </ul>
     """
-    
-    return html_response
-
-# Helper function for 2FA (placeholder)
-def send_2fa_code(user, code):
-    """Send 2FA code via email - placeholder for future implementation"""
-    current_app.logger.info(f"2FA code for {user.email}: {code}")
-    return True

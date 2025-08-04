@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}Enable Two-Factor Authentication - SilverSage{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h1>🛡️ Enable Two-Factor Authentication</h1>
+    <p class="form-subtitle">Add an extra layer of security to your account</p>
+    
+    <div class="setup-info">
+        <div class="info-card">
+            <h3>How it works:</h3>
+            <ol>
+                <li>📧 We'll send a security code to your email: <strong>{{ current_user.email }}</strong></li>
+                <li>🔢 Enter the code when logging in</li>
+                <li>🔑 Save backup codes for emergency access</li>
+            </ol>
+        </div>
+        
+        <div class="benefits-card">
+            <h3>Benefits:</h3>
+            <ul>
+                <li>🔐 Protects your account even if your password is stolen</li>
+                <li>🛡️ Blocks unauthorized access attempts</li>
+                <li>📧 Uses your email - no extra apps needed</li>
+                <li>🔑 Backup codes ensure you never get locked out</li>
+            </ul>
+        </div>
+    </div>
+    
+    <form method="POST">
+        <div class="confirmation-section">
+            <div class="checkbox-group">
+                <input type="checkbox" id="understand" name="understand" required>
+                <label for="understand">
+                    I understand that I'll need access to my email (<strong>{{ current_user.email }}</strong>) to log in after enabling 2FA
+                </label>
+            </div>
+            
+            <div class="checkbox-group">
+                <input type="checkbox" id="backup" name="backup" required>
+                <label for="backup">
+                    I will save the backup codes in a secure location
+                </label>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <button type="submit" class="btn btn-success">Send Test Code & Enable 2FA</button>
+            <a href="{{ url_for('auth.security_settings') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+    
+    <div class="help-section">
+        <h3>Need Help?</h3>
+        <p>If you have concerns about enabling 2FA, please contact our support team. We're here to help keep your account secure.</p>
+    </div>
+</div>
+
+<style>
+.setup-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.info-card, .benefits-card {
+    background: var(--light-bg);
+    padding: 20px;
+    border-radius: 8px;
+    border-left: 4px solid var(--primary-color);
+}
+
+.info-card h3, .benefits-card h3 {
+    color: var(--primary-color);
+    margin-bottom: 15px;
+    font-size: 18px;
+}
+
+.info-card ol, .benefits-card ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.info-card li, .benefits-card li {
+    margin-bottom: 8px;
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+.confirmation-section {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 25px;
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.checkbox-group input[type="checkbox"] {
+    margin-top: 4px;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.checkbox-group label {
+    font-size: 16px;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.help-section {
+    background: var(--light-bg);
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 30px;
+    text-align: center;
+}
+
+.help-section h3 {
+    color: var(--primary-color);
+    margin-bottom: 10px;
+}
+
+.help-section p {
+    color: #666;
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+    .setup-info {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .form-group .btn {
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}

@@ -36,7 +36,7 @@ def create_app():
     # Setup login manager
     login_manager = LoginManager()
     login_manager.init_app(app)
-    login_manager.login_view = 'auth.login'
+    login_manager.login_view = 'auth.login'  # FIXED: This should match the blueprint route
     login_manager.login_message = 'Please log in to access this page.'
     login_manager.login_message_category = 'info'
     
@@ -44,13 +44,17 @@ def create_app():
     def load_user(user_id):
         return User.query.get(int(user_id))
     
-    # Register blueprints
+    # FIXED: Register blueprints with proper URL prefixes
     from events import events
     from forum import forum
     from volunteer import volunteer
-    app.register_blueprint(auth, url_prefix='/auth')
-    app.register_blueprint(simple_google_auth, url_prefix='')  # Fixed Google auth
-    app.register_blueprint(admin, url_prefix='')
+    
+    # Register auth blueprint WITHOUT /auth prefix so login is at /login
+    app.register_blueprint(auth)
+    
+    # Register other blueprints
+    app.register_blueprint(simple_google_auth)
+    app.register_blueprint(admin)
     app.register_blueprint(events, url_prefix='/events')
     app.register_blueprint(forum, url_prefix='/forum')
     app.register_blueprint(volunteer, url_prefix='/volunteer')
@@ -77,8 +81,6 @@ def create_app():
                 logger.warning(f"Could not create default profile picture: {e}")
     
     # Routes
-
-    
     @app.route('/')
     def index():
         """Landing page - show to all visitors first"""
@@ -86,11 +88,19 @@ def create_app():
             return redirect(url_for('dashboard'))
         else:
             return render_template('landing.html')
-    # In your Flask app configuration
+    
+    # FIXED: Consolidated CSP configuration
     @app.after_request
     def after_request(response):
-    # Allow Leaflet CDN
-        csp = "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; connect-src 'self' https://*.tile.openstreetmap.org;"
+        # Allow Leaflet CDN and other necessary resources
+        csp = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' https://unpkg.com; "
+            "style-src 'self' 'unsafe-inline' https://unpkg.com; "
+            "connect-src 'self' https://*.tile.openstreetmap.org; "
+            "img-src 'self' data: https://*.tile.openstreetmap.org https://unpkg.com; "
+            "font-src 'self' data:"
+        )
         response.headers['Content-Security-Policy'] = csp
         return response
     
@@ -100,7 +110,6 @@ def create_app():
         if not current_user.is_authenticated:
             return redirect(url_for('index'))
         return render_template('home.html')
-
 
     @app.route('/faq')
     def faq_page():
@@ -155,6 +164,14 @@ def create_app():
                     <p><strong>Debug Route:</strong> <a href="/auth/google/debug">Check Google OAuth Debug</a></p>
                 </div>
                 
+                <h3>Available Routes:</h3>
+                <div class="info">
+                    <p><a href="/">Landing Page</a></p>
+                    <p><a href="/login">Login Page</a></p>
+                    <p><a href="/register">Register Page</a></p>
+                    <p><a href="/auth/google">Google OAuth</a></p>
+                </div>
+                
                 <h3>Next Steps:</h3>
                 <ol>
                     <li>If you see existing tables (users, posts, test_table), you're connected to the right database!</li>
@@ -193,6 +210,7 @@ def create_app():
     @app.route('/dashboard')
     @login_required
     def dashboard():
+        """User dashboard - redirect admins to admin dashboard"""
         if current_user.is_admin:
             return redirect(url_for('admin.admin_dashboard'))
         return render_template('dashboard.html')
@@ -281,7 +299,8 @@ if __name__ == '__main__':
     print("="*60)
     print("\n✅ Available URLs:")
     print("✅ Landing page: https://localhost:5000")
-    print("✅ Login page: https://localhost:5000/auth/login")
+    print("✅ Login page: https://localhost:5000/login")
+    print("✅ Register page: https://localhost:5000/register")
     print("✅ Database test: https://localhost:5000/test-db")
     print("✅ Google OAuth debug: https://localhost:5000/auth/google/debug")
     print("✅ Admin login: admin@silversage.com / Admin@123")
