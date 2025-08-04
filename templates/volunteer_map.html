@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Volunteer Map{% endblock %}
+
+{% block content %}
+<h1>Volunteer Map</h1>
+<div id="map" style="height: 400px; width: 100%; border: 1px solid #ccc;"></div>
+<p id="status" class="text-muted mt-2"></p>
+{% endblock %}
+
+{% block scripts %}
+  {{ super() }}
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const map = L.map('map').setView([1.3521, 103.8198], 11);
+      const markers = {};
+      const status = document.getElementById('status');
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+
+      function addMarker(request) {
+        const marker = L.marker([request.lat, request.lng]).addTo(map);
+        let popupContent = `<b>${request.title}</b><br>${request.description}
+          <br><button class="btn btn-success btn-sm mt-2" onclick="goToRequest(${request.id})">Go To</button>`;
+        marker.bindPopup(popupContent);
+        markers[request.id] = marker;
+      }
+
+      fetch('{{ url_for("volunteer_requests_json") }}')
+        .then(res => res.json())
+        .then(data => {
+          data.forEach(req => {
+            if (req.lat && req.lng) addMarker(req);
+          });
+        });
+
+      window.goToRequest = function (requestId) {
+        if (!confirm("Do you want to accept this request and remove it?")) return;
+        fetch(`/volunteer/go/${requestId}`, { method: 'DELETE' })
+          .then(res => res.json())
+          .then(result => {
+            if (result.success) {
+              map.removeLayer(markers[requestId]);
+              delete markers[requestId];
+              status.textContent = "You accepted the request!";
+            } else {
+              status.textContent = result.error || "Failed to accept request.";
+            }
+          });
+      };
+    });
+  </script>
+{% endblock %}
