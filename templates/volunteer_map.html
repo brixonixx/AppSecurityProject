@@ -9,18 +9,36 @@
 
 {% block scripts %}
   {{ super() }}
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const map = L.map('map').setView([1.3521, 103.8198], 11);
+      console.log('Volunteer map initializing...');
+      
+      let map;
+      try {
+        map = L.map('map').setView([1.3521, 103.8198], 11);
+        console.log('Map created successfully');
+      } catch (error) {
+        console.error('Error creating map:', error);
+        document.getElementById('status').textContent = "Error initializing map: " + error.message;
+        return;
+      }
+
       const markers = {};
       const status = document.getElementById('status');
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
-      }).addTo(map);
+      try {
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+          maxZoom: 19
+        }).addTo(map);
+        console.log('Tile layer added');
+      } catch (error) {
+        console.error('Error adding tile layer:', error);
+        status.textContent = "Error loading map tiles: " + error.message;
+      }
 
       function addMarker(request) {
         const marker = L.marker([request.lat, request.lng]).addTo(map);
@@ -59,21 +77,40 @@
       }
 
       // Load and display help requests - KEEPING ORIGINAL functionality
-      fetch('{{ url_for("volunteer.volunteer_requests_json") }}')
-        .then(res => res.json())
+      console.log('Fetching help requests...');
+      const requestsUrl = '{{ url_for("volunteer.volunteer_requests_json") }}';
+      console.log('Requests URL:', requestsUrl);
+      
+      fetch(requestsUrl)
+        .then(res => {
+          console.log('Response status:', res.status);
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+          }
+          return res.json();
+        })
         .then(data => {
+          console.log('Received data:', data);
+          if (!Array.isArray(data)) {
+            throw new Error('Invalid data format received');
+          }
+          
           if (data.length === 0) {
             status.textContent = "No help requests currently active.";
           } else {
             status.textContent = `Showing ${data.length} help request(s).`;
             data.forEach(req => {
-              if (req.lat && req.lng) addMarker(req);
+              if (req.lat && req.lng) {
+                addMarker(req);
+              } else {
+                console.warn('Request missing coordinates:', req);
+              }
             });
           }
         })
         .catch(error => {
-          status.textContent = "Error loading help requests.";
           console.error('Error fetching requests:', error);
+          status.textContent = "Error loading help requests: " + error.message;
         });
 
       // KEEPING ORIGINAL goToRequest function with backend integration
