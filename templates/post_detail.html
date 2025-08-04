@@ -15,7 +15,7 @@
   <div class="card shadow-sm mb-4">
     <div class="card-body">
       <h1 class="card-title">{{ post.title }}</h1>
-      <p class="card-text">{{ post.content|nl2br|safe }}</p>
+      <p class="card-text" style="white-space: pre-wrap;">{{ post.content }}</p>
 
       <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
         <p class="card-subtitle text-muted small mb-0">
@@ -72,7 +72,7 @@
           <div class="comment mb-3 p-3 bg-light rounded">
             <div class="d-flex justify-content-between align-items-start">
               <div class="flex-grow-1">
-                <p class="mb-2">{{ comment.content|nl2br|safe }}</p>
+                <p class="mb-2" style="white-space: pre-wrap;">{{ comment.content }}</p>
                 <small class="text-muted">
                   By <strong>{{ comment.author }}</strong>
                 </small>
