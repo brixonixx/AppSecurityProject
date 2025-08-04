@@ -616,3 +616,9 @@ def delete_event(event_id):
         logging.exception(f"An exception occured when deleting an event: {e}")
         flash(f"An error occured when deleting event {id}", "danger")
     return redirect(url_for("admin.event_management"))
+
+
+@app.route('/faq')
+def faq_page():
+    """FAQ page with accessibility support"""
+    return render_template('faq.html')

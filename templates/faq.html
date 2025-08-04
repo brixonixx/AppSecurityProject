@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FAQ</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      background: #fff;
+      color: #1a1a1a;
+      padding: 2rem 1rem;
+    }
+
+    h1 {
+      font-size: 3rem;
+      margin-bottom: 3rem;
+      letter-spacing: 0.2em;
+      color: #1a1a1a;
+    }
+
+    .tabs {
+      display: flex;
+      justify-content: center;
+      gap: 3rem;
+      font-weight: bold;
+      margin-bottom: 3rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .tabs div {
+      cursor: pointer;
+      color: #666;
+      transition: color 0.3s ease;
+    }
+
+    .tabs .active {
+      color: #d15d5d;
+    }
+
+    .faq-section {
+      max-width: 800px;
+      margin: auto;
+      text-align: left;
+    }
+
+    .faq-question {
+      font-weight: bold;
+      margin-top: 2rem;
+      cursor: pointer;
+      position: relative;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      color: #1a1a1a;
+      transition: all 0.3s ease;
+    }
+
+    .faq-question::before {
+      content: "+";
+      margin-right: 15px;
+      font-size: 1.2em;
+      transition: transform 0.3s ease;
+    }
+
+    .faq-question.open::before {
+      content: "-";
+      transform: rotate(0deg);
+    }
+
+    .faq-answer {
+      display: none;
+      margin-top: 0.8rem;
+      margin-left: 30px;
+      color: #666;
+      line-height: 1.6;
+      padding-bottom: 1rem;
+    }
+
+    .faq-question.open + .faq-answer {
+      display: block;
+    }
+
+    .faq-content {
+      display: none;
+    }
+    
+    .faq-content.active {
+      display: block;
+    }
+
+    .contact-section {
+      margin-top: 4rem;
+      text-align: center;
+    }
+
+    .contact-button {
+      background-color: #d15d5d;
+      color: #fff;
+      padding: 1rem 2rem;
+      text-transform: uppercase;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      letter-spacing: 0.05em;
+      transition: background-color 0.3s ease;
+    }
+
+    .contact-button:hover {
+      background-color: #b44d4d;
+    }
+
+    @media (max-width: 768px) {
+      .tabs {
+        flex-wrap: wrap;
+        gap: 1.5rem;
+      }
+      
+      h1 {
+        font-size: 2rem;
+      }
+      
+      .faq-section {
+        padding: 0 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>FAQ</h1>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="login">Login</div>
+    <div class="tab" data-tab="forum">Forum</div>
+    <div class="tab" data-tab="volunteer">Volunteer</div>
+    <div class="tab" data-tab="events">Events</div>
+    <div class="tab" data-tab="settings">Settings</div>
+  </div>
+
+  <div class="faq-section">
+    <!-- Login Tab -->
+    <div id="login" class="faq-content active">
+      <div class="faq-question">How do I create an account?</div>
+      <div class="faq-answer">
+        Go to the registration page, fill in your details, and submit. You'll receive a confirmation email—click the link to activate your account.
+      </div>
+
+      <div class="faq-question">Can I use Google to login?</div>
+      <div class="faq-answer">
+        Yes! Just click "Sign in with Google" on the login page and follow the prompts.
+      </div>
+
+      <div class="faq-question">I forgot my password—how can I reset it?</div>
+      <div class="faq-answer">
+        Click "Forgot Password?" on the login page, enter your email, and follow the instructions in the reset email.
+      </div>
+
+      <div class="faq-question">I want to change my password. How?</div>
+      <div class="faq-answer">
+        Log in, go to your profile settings, and select "Change Password." Enter your current and new password, then save the changes.
+      </div>
+
+      <div class="faq-question">How do I update my profile information or change my email preferences?</div>
+      <div class="faq-answer">
+        Go to your profile settings to update your info. For email preferences, go to the notification settings and adjust as needed.
+      </div>
+    </div>
+
+    <!-- Forum Tab -->
+    <div id="forum" class="faq-content">
+      <div class="faq-question">How do I create a new post?</div>
+      <div class="faq-answer">
+        Navigate to the forum section and click "New Post." Fill in your title and content, then click "Publish" to share with the community.
+      </div>
+
+      <div class="faq-question">Can I edit or delete my posts?</div>
+      <div class="faq-answer">
+        Yes, you can edit or delete your own posts by clicking the three dots menu next to your post and selecting the appropriate option.
+      </div>
+
+      <div class="faq-question">How do I report inappropriate content?</div>
+      <div class="faq-answer">
+        Click the "Report" button on any post or comment that violates our community guidelines. Our moderators will review it promptly.
+      </div>
+    </div>
+
+    <!-- Volunteer Tab -->
+    <div id="volunteer" class="faq-content">
+      <div class="faq-question">How can I become a volunteer?</div>
+      <div class="faq-answer">
+        To become a volunteer, visit the "Volunteer" page on our website. You will find an application form where you can provide your contact information, interests, and availability. After submitting the form, we'll get in touch with you regarding the next steps.
+      </div>
+
+      <div class="faq-question">How do I offer help as a volunteer?</div>
+      <div class="faq-answer">
+        Click on the pin on the map and a pop-up will show up. If you would like to offer help, click the "Go To" button in the pop-up.
+      </div>
+
+      <div class="faq-question">What types of volunteer opportunities are available?</div>
+      <div class="faq-answer">
+        We offer various volunteer opportunities including event assistance, community outreach, administrative support, and specialized skill-based volunteering. Check our volunteer page for current openings.
+      </div>
+    </div>
+
+    <!-- Events Tab -->
+    <div id="events" class="faq-content">
+      <div class="faq-question">How do I sign up for an event?</div>
+      <div class="faq-answer">
+        Click the "Sign Up Now!" button on the event card. You must be logged in to register.
+      </div>
+
+      <div class="faq-question">Is there a limit to how many events I can join?</div>
+      <div class="faq-answer">
+        You may join as many events as you wish, subject to availability. Some events may have limited slots.
+      </div>
+
+      <div class="faq-question">Do I need an account to join an event?</div>
+      <div class="faq-answer">
+        Yes. You need to be a registered user and logged in to sign up or view your registered events.
+      </div>
+
+      <div class="faq-question">Can I register someone else for an event?</div>
+      <div class="faq-answer">
+        No. Each participant must register using their own account to ensure accurate attendance and communication.
+      </div>
+
+      <div class="faq-question">Can I cancel my event registration?</div>
+      <div class="faq-answer">
+        Yes, you can cancel your registration from your account dashboard. Please note that some events may have cancellation deadlines.
+      </div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div id="settings" class="faq-content">
+      <div class="faq-question">How do I change my notification preferences?</div>
+      <div class="faq-answer">
+        Go to Settings > Notifications in your account dashboard. You can customize which types of notifications you receive via email or push notifications.
+      </div>
+
+      <div class="faq-question">Can I delete my account?</div>
+      <div class="faq-answer">
+        Yes, you can delete your account from Settings > Account Management. Please note that this action is permanent and cannot be undone.
+      </div>
+
+      <div class="faq-question">How do I change my privacy settings?</div>
+      <div class="faq-answer">
+        Navigate to Settings > Privacy to control who can see your profile, posts, and activity. You can also manage data sharing preferences here.
+      </div>
+
+      <div class="faq-question">Can I export my data?</div>
+      <div class="faq-answer">
+        Yes, you can request a data export from Settings > Data Management. We'll prepare your data and send you a download link within 48 hours.
+      </div>
+    </div>
+  </div>
+
+  <div class="contact-section">
+    <button class="contact-button">Contact Support</button>
+  </div>
+
+  <script>
+    // Tab switching functionality
+    const tabs = document.querySelectorAll('.tab');
+    const faqContents = document.querySelectorAll('.faq-content');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        // Remove active class from all tabs
+        tabs.forEach(t => t.classList.remove('active'));
+        // Add active class to clicked tab
+        tab.classList.add('active');
+
+        // Get the tab content ID
+        const tabContent = tab.getAttribute('data-tab');
+
+        // Hide all content sections
+        faqContents.forEach(content => {
+          content.classList.remove('active');
+        });
+
+        // Show selected content section
+        document.getElementById(tabContent).classList.add('active');
+
+        // Close all open questions when switching tabs
+        const questions = document.querySelectorAll('.faq-question');
+        questions.forEach(q => {
+          q.classList.remove('open');
+        });
+      });
+    });
+
+    // FAQ accordion functionality
+    const questions = document.querySelectorAll('.faq-question');
+    questions.forEach(q => {
+      q.addEventListener('click', () => {
+        q.classList.toggle('open');
+      });
+    });
+
+    // Contact button functionality
+    document.querySelector('.contact-button').addEventListener('click', () => {
+      alert('Contact support functionality would be implemented here');
+    });
+  </script>
+
+</body>
+</html>

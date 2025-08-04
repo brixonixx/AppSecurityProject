@@ -92,6 +92,12 @@ def create_app():
             return redirect(url_for('index'))
         return render_template('home.html')
 
+
+@app.route('/faq')
+def faq_page():
+    """FAQ page with accessibility support"""
+    return render_template('faq.html')
+
     @app.route('/test-db')
     def test_db():
         """Test database connection and show useful info"""
