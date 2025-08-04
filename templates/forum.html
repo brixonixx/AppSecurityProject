@@ -129,22 +129,12 @@
     color: var(--primary-color) !important;
 }
 
-/* Action buttons section - Enhanced for debugging */
+/* Action buttons section */
 .container .card-body > div:last-child {
     display: flex !important;
     align-items: center !important;
     gap: 10px !important;
     flex-wrap: wrap !important;
-    background: rgba(0,255,0,0.1) !important; /* Temporary debugging background */
-    padding: 10px !important;
-    border-radius: 4px !important;
-}
-
-/* Ensure all buttons in the action section are visible */
-.container .card-body > div:last-child * {
-    visibility: visible !important;
-    opacity: 1 !important;
-    display: inline-block !important;
 }
 
 /* View Post button */
@@ -169,7 +159,7 @@
     text-decoration: none !important;
 }
 
-/* Delete button styling - Enhanced visibility */
+/* Delete button styling */
 .container .btn-danger {
     background: #dc3545 !important;
     color: white !important;
@@ -181,10 +171,6 @@
     cursor: pointer !important;
     transition: all 0.3s ease !important;
     display: inline-block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    position: relative !important;
-    z-index: 10 !important;
 }
 
 .container .btn-danger:hover {
@@ -200,20 +186,11 @@
     outline-offset: 2px !important;
 }
 
-/* Delete form styling - Ensure proper display */
+/* Delete form styling */
 .container .card-body form.d-inline {
     display: inline-block !important;
     margin: 0 !important;
     padding: 0 !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    position: relative !important;
-}
-
-.container .card-body form.d-inline button {
-    display: inline-block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
 }
 
 /* Empty state styling */
@@ -374,16 +351,6 @@
                 View Post
               </a>
               
-              <!-- Debug info - Remove this after testing -->
-              <small style="color: red; display: block; margin: 5px 0;">
-                Debug: current_user = "{{ current_user.username if current_user.is_authenticated else 'NOT_LOGGED_IN' }}" | 
-                session user = "{{ session.get('username', 'NOT_SET') }}" | 
-                post author = "{{ post.author }}" | 
-                current_user match = {{ current_user.username == post.author if current_user.is_authenticated else False }} |
-                session match = {{ session.get('username') == post.author }}
-              </small>
-              
-              <!-- Fixed delete button using current_user -->
               {% if current_user.is_authenticated and current_user.username == post.author %}
                 <form method="POST" action="{{ url_for('forum.delete_post', post_id=post.id) }}" class="d-inline">
                   <button type="submit" class="btn btn-sm btn-danger"
