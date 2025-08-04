@@ -71,38 +71,7 @@ def new_post():
 
     return render_template('new_post.html')
 
-@forum.route("/edit/<int:post_id>", methods=['GET', 'POST'])
-@login_required
-def edit_post(post_id):
-    try:
-        post = Post.query.get_or_404(post_id)
 
-        # Ensure only the author can edit
-        if post.author != current_user.username:
-            flash("You are not authorized to edit this post.", "danger")
-            return redirect(url_for('forum.view_post', post_id=post_id))
-
-        if request.method == 'POST':
-            title = request.form.get('title')
-            content = request.form.get('content')
-            
-            if not title or not content:
-                flash("Title and content are required", "warning")
-                return render_template('edit_post.html', post=post)
-            
-            post.title = title
-            post.content = content
-            db.session.commit()
-            flash("Post updated successfully!", "success")
-            return redirect(url_for('forum.view_post', post_id=post_id))
-
-    except Exception as e:
-        db.session.rollback()
-        logging.exception(f"An exception occurred when editing post {post_id}: {e}")
-        flash("An error occurred when editing the post", "danger")
-        return redirect(url_for('forum.list_posts'))
-
-    return render_template('edit_post.html', post=post)
 
 @forum.route("/delete/<int:post_id>", methods=['POST'])
 @login_required
