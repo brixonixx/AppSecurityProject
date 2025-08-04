@@ -185,8 +185,7 @@ def volunteer_go_to_request(request_id):
 def claim_volunteer_request(request_id):
     """Claim a volunteer request"""
     if not current_user.is_authenticated:
-        flash("Login required", "warning")
-        return redirect(url_for('auth.login'))
+        return jsonify({"success": False, "error": "Login required"}), 403
 
     try:
         vr = VolunteerRequest.query.get_or_404(request_id)
@@ -194,43 +193,37 @@ def claim_volunteer_request(request_id):
         if not vr.claimed_by:
             vr.claimed_by = get_current_username()
             db.session.commit()
-            flash("You have claimed this request!", "info")
+            return jsonify({"success": True, "message": "Request claimed successfully"})
         else:
-            flash("This request has already been claimed", "warning")
+            return jsonify({"success": False, "error": "Request already claimed"}), 400
             
     except Exception as e:
         db.session.rollback()
         logging.exception(f"An exception occurred when claiming request {request_id}: {e}")
-        flash("An error occurred when claiming the request", "danger")
-
-    return redirect(url_for('volunteer.volunteer_map'))
+        return jsonify({"success": False, "error": "An error occurred"}), 500
 
 @volunteer.route("/delete/<int:request_id>", methods=['POST'])
 @login_required
 def delete_volunteer_request(request_id):
     """Delete own volunteer request"""
     if not current_user.is_authenticated:
-        flash("Login required to delete your request", "warning")
-        return redirect(url_for('volunteer.volunteer_map'))
+        return jsonify({"success": False, "error": "Login required"}), 403
 
     try:
         vr = VolunteerRequest.query.get_or_404(request_id)
         
         # Only allow the original requester to delete their own request
         if vr.requester != get_current_username():
-            flash("You are not authorized to delete this request", "danger")
-            return redirect(url_for('volunteer.volunteer_map'))
+            return jsonify({"success": False, "error": "Not authorized"}), 403
 
         db.session.delete(vr)
         db.session.commit()
-        flash("Your help request has been deleted!", "success")
+        return jsonify({"success": True, "message": "Request deleted successfully"})
         
     except Exception as e:
         db.session.rollback()
         logging.exception(f"An exception occurred when deleting request {request_id}: {e}")
-        flash("An error occurred when deleting the request", "danger")
-
-    return redirect(url_for('volunteer.volunteer_map'))
+        return jsonify({"success": False, "error": "An error occurred"}), 500
 
 ### ------------------ API ENDPOINTS ------------------- ###
 

@@ -18,6 +18,13 @@
       
       let map;
       try {
+        // Wait for Leaflet to be fully loaded
+        if (typeof L === 'undefined') {
+          console.error('Leaflet library not loaded');
+          document.getElementById('status').textContent = "Map library failed to load";
+          return;
+        }
+        
         map = L.map('map').setView([1.3521, 103.8198], 11);
         console.log('Map created successfully');
       } catch (error) {
@@ -35,6 +42,12 @@
           maxZoom: 19
         }).addTo(map);
         console.log('Tile layer added');
+        
+        // Force map to resize after initialization
+        setTimeout(() => {
+          map.invalidateSize();
+        }, 100);
+        
       } catch (error) {
         console.error('Error adding tile layer:', error);
         status.textContent = "Error loading map tiles: " + error.message;
@@ -76,7 +89,7 @@
         markers[request.id] = marker;
       }
 
-      // Load and display help requests - KEEPING ORIGINAL functionality
+      // Load and display help requests
       console.log('Fetching help requests...');
       const requestsUrl = '{{ url_for("volunteer.volunteer_requests_json") }}';
       console.log('Requests URL:', requestsUrl);
@@ -113,7 +126,7 @@
           status.textContent = "Error loading help requests: " + error.message;
         });
 
-      // KEEPING ORIGINAL goToRequest function with backend integration
+      // Go to request function with proper error handling
       window.goToRequest = function (requestId) {
         if (!confirm("Do you want to accept this request and remove it?")) return;
         
@@ -121,6 +134,7 @@
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
           }
         })
         .then(res => res.json())
@@ -149,7 +163,7 @@
         });
       };
 
-      // New function to claim requests
+      // Claim request function with proper JSON handling
       window.claimRequest = function (requestId) {
         if (!confirm("Do you want to claim this request?")) return;
         
@@ -157,17 +171,19 @@
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
           }
         })
-        .then(res => {
-          if (res.ok) {
+        .then(res => res.json())
+        .then(result => {
+          if (result.success) {
             status.textContent = "Request claimed! Refreshing map...";
             // Refresh the page to show updated claim status
             setTimeout(() => {
               window.location.reload();
             }, 1000);
           } else {
-            status.textContent = "Failed to claim request.";
+            status.textContent = result.error || "Failed to claim request.";
           }
         })
         .catch(error => {
@@ -176,7 +192,7 @@
         });
       };
 
-      // New function to delete own requests
+      // Delete request function with proper JSON handling
       window.deleteRequest = function (requestId) {
         if (!confirm("Are you sure you want to delete your help request?")) return;
         
@@ -184,10 +200,12 @@
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
           }
         })
-        .then(res => {
-          if (res.ok) {
+        .then(res => res.json())
+        .then(result => {
+          if (result.success) {
             if (markers[requestId]) {
               map.removeLayer(markers[requestId]);
               delete markers[requestId];
@@ -202,7 +220,7 @@
               status.textContent += ` ${remainingCount} request(s) remaining.`;
             }
           } else {
-            status.textContent = "Failed to delete request.";
+            status.textContent = result.error || "Failed to delete request.";
           }
         })
         .catch(error => {

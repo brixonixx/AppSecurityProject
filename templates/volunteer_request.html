@@ -1,15 +1,140 @@
 {% extends "base.html" %}
-{% block title %}Register as Volunteer{% endblock %}
+{% block title %}Request Help{% endblock %}
 
 {% block content %}
-<h1>Volunteer Registration</h1>
-{% if user.is_volunteer %}
-<div class="alert alert-success">
-  You are already registered as a volunteer.
+<h1>Request Help</h1>
+
+<div class="row">
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Create Help Request</h5>
+        <form method="POST" id="helpRequestForm">
+          <div class="mb-3">
+            <label for="title" class="form-label">Title</label>
+            <input type="text" class="form-control" id="title" name="title" 
+                   value="Help Request" required>
+          </div>
+          
+          <div class="mb-3">
+            <label for="description" class="form-label">Description</label>
+            <textarea class="form-control" id="description" name="description" 
+                      rows="3" required>User requested help</textarea>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Location</label>
+            <div class="d-flex gap-2">
+              <button type="button" id="getLocationBtn" class="btn btn-outline-primary">
+                Get Current Location
+              </button>
+              <span id="locationStatus" class="text-muted align-self-center"></span>
+            </div>
+            <input type="hidden" name="lat" id="lat" required>
+            <input type="hidden" name="lng" id="lng" required>
+          </div>
+          
+          <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
+            Submit Help Request
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Location Preview</h5>
+        <div id="map" style="height: 300px; width: 100%; border: 1px solid #ccc;"></div>
+      </div>
+    </div>
+  </div>
 </div>
-{% else %}
-<form method="POST">
-  <button type="submit" class="btn btn-primary">Register as Volunteer</button>
-</form>
-{% endif %}
 {% endblock %}
+
+{% block scripts %}
+  {{ super() }}
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const getLocationBtn = document.getElementById('getLocationBtn');
+      const locationStatus = document.getElementById('locationStatus');
+      const latInput = document.getElementById('lat');
+      const lngInput = document.getElementById('lng');
+      const submitBtn = document.getElementById('submitBtn');
+      
+      let map;
+      let marker;
+      
+      // Initialize map
+      try {
+        if (typeof L !== 'undefined') {
+          map = L.map('map').setView([1.3521, 103.8198], 11);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
+          }).addTo(map);
+          
+          // Force map resize after initialization
+          setTimeout(() => {
+            map.invalidateSize();
+          }, 100);
+        }
+      } catch (error) {
+        console.error('Error initializing map:', error);
+      }
+      
+      // Get location button handler
+      getLocationBtn.addEventListener('click', () => {
+        if (!navigator.geolocation) {
+          locationStatus.textContent = "Geolocation not supported";
+          locationStatus.className = "text-danger align-self-center";
+          return;
+        }
+        
+        locationStatus.textContent = "Getting location...";
+        locationStatus.className = "text-info align-self-center";
+        getLocationBtn.disabled = true;
+        
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            
+            latInput.value = lat;
+            lngInput.value = lng;
+            submitBtn.disabled = false;
+            
+            locationStatus.textContent = `Location found: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+            locationStatus.className = "text-success align-self-center";
+            getLocationBtn.disabled = false;
+            
+            // Update map if available
+            if (map) {
+              map.setView([lat, lng], 15);
+              
+              if (marker) {
+                map.removeLayer(marker);
+              }
+              
+              marker = L.marker([lat, lng]).addTo(map);
+              marker.bindPopup("Your location").openPopup();
+            }
+          },
+          (error) => {
+            locationStatus.textContent = "Error getting location: " + error.message;
+            locationStatus.className = "text-danger align-self-center";
+            getLocationBtn.disabled = false;
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 60000
+          }
+        );
+      });
+    });
+  </script>
