@@ -7,7 +7,7 @@
 <div class="container mt-4">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="mb-0">Community Forum</h2>
-    <a href="{{ url_for('new_post') }}" class="btn btn-success">+ New Post</a>
+    <a href="{{ url_for('forum.new_post') }}" class="btn btn-success">+ New Post</a>
   </div>
 
   {% if posts %}
@@ -15,7 +15,7 @@
       <div class="card mb-3 shadow-sm">
         <div class="card-body">
           <h5 class="card-title">
-            <a href="{{ url_for('view_post', post_id=post.id) }}" class="text-decoration-none text-dark">
+            <a href="{{ url_for('forum.view_post', post_id=post.id) }}" class="text-decoration-none text-dark">
               {{ post.title }}
             </a>
           </h5>
@@ -28,11 +28,11 @@
             </p>
 
             <div>
-              <a href="{{ url_for('view_post', post_id=post.id) }}" class="btn btn-sm btn-outline-primary me-2">
+              <a href="{{ url_for('forum.view_post', post_id=post.id) }}" class="btn btn-sm btn-outline-primary me-2">
                 View Post
               </a>
               {% if session['username'] == post.author %}
-                <form method="POST" action="{{ url_for('delete_post', post_id=post.id) }}" class="d-inline">
+                <form method="POST" action="{{ url_for('forum.delete_post', post_id=post.id) }}" class="d-inline">
                   <button type="submit" class="btn btn-sm btn-danger"
                           onclick="return confirm('Are you sure you want to delete this post?');">
                     Delete

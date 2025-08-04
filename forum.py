@@ -1,8 +1,20 @@
 # forum.py - Forum routes and functionality
 from flask import render_template, request, redirect, url_for, flash, session, Blueprint
 from flask_login import login_required, current_user
-from models import db, Post, Comment
+from models import *
 import logging
+
+from flask import Flask, render_template, request, session, redirect, url_for, flash, jsonify
+from markupsafe import escape
+from flask_sqlalchemy import SQLAlchemy
+from wtforms import Form, StringField, TextAreaField, IntegerField, validators
+from datetime import datetime, timedelta
+import uuid
+import os
+from sqlalchemy import text
+from functools import wraps
+from collections import defaultdict
+import time
 
 forum = Blueprint('forum', __name__)
 
