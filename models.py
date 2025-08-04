@@ -352,3 +352,12 @@ class Comment(db.Model):
     author = db.Column(db.String(80), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
+
+class VolunteerRequest(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    requester = db.Column(db.String(80), nullable=False)
+    claimed_by = db.Column(db.String(80), nullable=True)
+    latitude = db.Column(db.Float, nullable=True)
+    longitude = db.Column(db.Float, nullable=True)
