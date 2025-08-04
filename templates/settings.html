@@ -1,0 +1,470 @@
+{% extends "base.html" %}
+
+{% block title %}Accessibility Settings - Community Forum{% endblock %}
+
+{% block content %}
+<!-- Inject accessibility CSS -->
+{{ accessibility_css | safe }}
+
+<div class="settings-container">
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert" style="font-size: 18px;">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <h1 id="main-title">
+        ⚙️ {{ get_text('settings_title') if get_text else 'Settings' }}
+    </h1>
+
+    <form method="POST" id="accessibility-form">
+
+        <!-- Font Size Section -->
+        <div class="setting-section">
+            <div class="setting-title" id="text-size-title">
+                🔤 {{ get_text('text_size') if get_text else 'Text Size' }}
+            </div>
+            <label for="font-size" class="form-label" id="font-size-label">
+                {{ get_text('make_text_bigger') if get_text else 'Make text bigger or smaller:' }}
+                <span class="font-size-display" id="font-size-display">{{ accessibility_settings.font_size if accessibility_settings else 18 }}px</span>
+            </label>
+            <input type="range" class="form-range font-size-slider" id="font-size" name="font_size"
+                   min="14" max="28" step="2" value="{{ accessibility_settings.font_size if accessibility_settings else 18 }}">
+
+            <div class="preview-text" id="preview-text">
+                {{ get_text('preview_text') if get_text else 'This is how your text will look. You can make it bigger or smaller using the slider above.' }}
+            </div>
+        </div>
+
+        <!-- Language Section -->
+        <div class="setting-section">
+            <div class="setting-title" id="language-title">
+                🌐 {{ get_text('language') if get_text else 'Language' }}
+            </div>
+            <p id="language-description">
+                {{ get_text('choose_language') if get_text else 'Choose your preferred language:' }}
+            </p>
+            <div class="language-buttons">
+                <label class="language-btn {% if not accessibility_settings or accessibility_settings.language == 'en' %}active{% endif %}">
+                    <input type="radio" name="language" value="en" style="display: none;"
+                           {% if not accessibility_settings or accessibility_settings.language == 'en' %}checked{% endif %}>
+                    English
+                </label>
+                <label class="language-btn {% if accessibility_settings and accessibility_settings.language == 'zh' %}active{% endif %}">
+                    <input type="radio" name="language" value="zh" style="display: none;"
+                           {% if accessibility_settings and accessibility_settings.language == 'zh' %}checked{% endif %}>
+                    中文 (Chinese)
+                </label>
+            </div>
+        </div>
+
+        <!-- Theme Section -->
+        <div class="setting-section">
+            <div class="setting-title" id="display-mode-title">
+                🎨 {{ get_text('display_mode') if get_text else 'Display Mode' }}
+            </div>
+            <p id="display-description">
+                {{ get_text('choose_display') if get_text else 'Choose how the screen looks:' }}
+            </p>
+            <div class="theme-options">
+                <label class="theme-card {% if not accessibility_settings or accessibility_settings.theme == 'light' %}active{% endif %}">
+                    <input type="radio" name="theme" value="light" style="display: none;"
+                           {% if not accessibility_settings or accessibility_settings.theme == 'light' %}checked{% endif %}>
+                    <div class="theme-preview light-preview">Light Mode</div>
+                    <div class="theme-title">☀️ {{ get_text('bright_background') if get_text else 'Bright Background' }}</div>
+                    <div class="theme-description">{{ get_text('easy_bright_rooms') if get_text else 'Easy to read in bright rooms' }}</div>
+                </label>
+
+                <label class="theme-card {% if accessibility_settings and accessibility_settings.theme == 'dark' %}active{% endif %}">
+                    <input type="radio" name="theme" value="dark" style="display: none;"
+                           {% if accessibility_settings and accessibility_settings.theme == 'dark' %}checked{% endif %}>
+                    <div class="theme-preview dark-preview">Dark Mode</div>
+                    <div class="theme-title">🌙 {{ get_text('dark_background') if get_text else 'Dark Background' }}</div>
+                    <div class="theme-description">{{ get_text('easier_night') if get_text else 'Easier on the eyes at night' }}</div>
+                </label>
+            </div>
+        </div>
+
+        <!-- Save Button -->
+        <button type="submit" class="btn btn-primary save-button" id="save-button">
+            💾 {{ get_text('save_settings') if get_text else 'Save My Settings' }}
+        </button>
+    </form>
+</div>
+
+<!-- Notification -->
+<div class="notification" id="notification">Settings saved successfully!</div>
+
+<style>
+.settings-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 30px;
+}
+
+.setting-section {
+    margin-bottom: 40px;
+    padding: 25px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    border: 2px solid #e9ecef;
+}
+
+.setting-title {
+    font-size: 24px;
+    font-weight: bold;
+    color: #495057;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#main-title {
+    text-align: center;
+    font-size: 32px;
+    margin-bottom: 40px;
+    color: #495057;
+}
+
+.form-label {
+    font-size: 20px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.font-size-display {
+    font-weight: bold;
+    color: #007bff;
+    font-size: 20px;
+    min-width: 80px;
+}
+
+.font-size-slider {
+    height: 8px;
+    margin: 20px 0;
+}
+
+.preview-text {
+    margin-top: 20px;
+    padding: 20px;
+    background: white;
+    border-radius: 8px;
+    border: 2px solid #dee2e6;
+    font-size: 18px;
+    line-height: 1.6;
+}
+
+.language-buttons {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.language-btn {
+    padding: 15px 25px;
+    font-size: 18px;
+    font-weight: bold;
+    border-radius: 8px;
+    border: 3px solid #007bff;
+    background: white;
+    color: #007bff;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 120px;
+}
+
+.language-btn.active {
+    background: #007bff;
+    color: white;
+}
+
+.theme-options {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: 15px;
+}
+
+.theme-card {
+    flex: 1;
+    min-width: 200px;
+    padding: 20px;
+    border-radius: 10px;
+    border: 3px solid #dee2e6;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.theme-card.active {
+    border-color: #007bff;
+    background: #e7f3ff;
+}
+
+.theme-preview {
+    width: 100%;
+    height: 80px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.light-preview {
+    background: #ffffff;
+    color: #333333;
+    border: 1px solid #dee2e6;
+}
+
+.dark-preview {
+    background: #1a1a1a;
+    color: #e0e0e0;
+}
+
+.theme-title {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.theme-description {
+    font-size: 14px;
+    color: #666;
+}
+
+.save-button {
+    padding: 20px 40px;
+    font-size: 22px;
+    font-weight: bold;
+    width: 100%;
+    margin-top: 30px;
+}
+
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 20px 30px;
+    background: #28a745;
+    color: white;
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: bold;
+    display: none;
+    z-index: 1000;
+}
+
+.notification.error {
+    background: #dc3545;
+}
+
+#language-description, #display-description {
+    font-size: 18px;
+    margin-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+    .settings-container {
+        padding: 15px;
+    }
+
+    .theme-options {
+        flex-direction: column;
+    }
+
+    .language-buttons {
+        flex-direction: column;
+    }
+
+    .language-btn {
+        width: 100%;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Language text dictionary
+    const texts = {
+        'en': {
+            'main-title': '⚙️ Settings',
+            'text-size-title': '🔤 Text Size',
+            'font-size-label': 'Make text bigger or smaller:',
+            'preview-text': 'This is how your text will look. You can make it bigger or smaller using the slider above.',
+            'language-title': '🌐 Language',
+            'language-description': 'Choose your preferred language:',
+            'display-mode-title': '🎨 Display Mode',
+            'display-description': 'Choose how the screen looks:',
+            'save-button': '💾 Save My Settings'
+        },
+        'zh': {
+            'main-title': '⚙️ 设置',
+            'text-size-title': '🔤 文字大小',
+            'font-size-label': '调整文字大小：',
+            'preview-text': '这是您的文字显示效果。您可以使用上面的滑块来调整文字大小。',
+            'language-title': '🌐 语言',
+            'language-description': '选择您的首选语言：',
+            'display-mode-title': '🎨 显示模式',
+            'display-description': '选择屏幕显示方式：',
+            'save-button': '💾 保存设置'
+        }
+    };
+
+    // Update font size display and preview
+    function updateFontSize() {
+        const fontSize = document.getElementById('font-size').value;
+        document.getElementById('font-size-display').textContent = fontSize + 'px';
+        document.getElementById('preview-text').style.fontSize = fontSize + 'px';
+    }
+
+    // Update language texts on the page
+    function updateLanguageTexts() {
+        const selectedLang = document.querySelector('input[name="language"]:checked').value;
+        const langTexts = texts[selectedLang] || texts['en'];
+        
+        Object.keys(langTexts).forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                if (id === 'font-size-label') {
+                    const fontSize = document.getElementById('font-size-display').textContent;
+                    element.innerHTML = langTexts[id] + ' <span class="font-size-display" id="font-size-display">' + fontSize + '</span>';
+                } else {
+                    element.textContent = langTexts[id];
+                }
+            }
+        });
+    }
+
+    // Apply theme preview
+    function applyTheme() {
+        const theme = document.querySelector('input[name="theme"]:checked').value;
+        const body = document.body;
+
+        if (theme === 'dark') {
+            body.style.backgroundColor = '#121212';
+            body.style.color = '#ffffff';
+            // Update all sections
+            document.querySelectorAll('.setting-section, .preview-text').forEach(el => {
+                el.style.backgroundColor = '#1e1e1e';
+                el.style.color = '#ffffff';
+                el.style.borderColor = '#444';
+            });
+            document.querySelectorAll('.theme-card').forEach(el => {
+                el.style.backgroundColor = '#2d2d2d';
+                el.style.color = '#ffffff';
+                el.style.borderColor = '#555';
+            });
+            document.querySelectorAll('.language-btn').forEach(el => {
+                if (!el.classList.contains('active')) {
+                    el.style.backgroundColor = '#2d2d2d';
+                    el.style.color = '#ffffff';
+                }
+            });
+        } else {
+            body.style.backgroundColor = '#ffffff';
+            body.style.color = '#333333';
+            // Reset to light colors
+            document.querySelectorAll('.setting-section, .preview-text').forEach(el => {
+                el.style.backgroundColor = '#f8f9fa';
+                el.style.color = '#495057';
+                el.style.borderColor = '#e9ecef';
+            });
+            document.querySelectorAll('.theme-card').forEach(el => {
+                el.style.backgroundColor = '';
+                el.style.color = '';
+                el.style.borderColor = '#dee2e6';
+            });
+            document.querySelectorAll('.language-btn').forEach(el => {
+                if (!el.classList.contains('active')) {
+                    el.style.backgroundColor = 'white';
+                    el.style.color = '#007bff';
+                }
+            });
+        }
+    }
+
+    // Event listeners
+    document.getElementById('font-size').addEventListener('input', updateFontSize);
+
+    // Language button styling and switching
+    document.querySelectorAll('input[name="language"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            document.querySelectorAll('.language-btn').forEach(btn => btn.classList.remove('active'));
+            this.parentElement.classList.add('active');
+            updateLanguageTexts();
+        });
+    });
+
+    // Theme card styling
+    document.querySelectorAll('input[name="theme"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            document.querySelectorAll('.theme-card').forEach(card => card.classList.remove('active'));
+            this.parentElement.classList.add('active');
+            applyTheme();
+        });
+    });
+
+    // Form submission
+    document.getElementById('accessibility-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const data = {};
+
+        for (let [key, value] of formData.entries()) {
+            data[key] = value;
+        }
+
+        fetch('/settings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showNotification('Settings saved successfully!');
+                // Reload page to apply new settings
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showNotification('Failed to save settings', true);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error saving settings', true);
+        });
+    });
+
+    function showNotification(message, isError = false) {
+        const notification = document.getElementById('notification');
+        notification.textContent = message;
+        notification.className = 'notification' + (isError ? ' error' : '');
+        notification.style.display = 'block';
+
+        setTimeout(() => {
+            notification.style.display = 'none';
+        }, 3000);
+    }
+
+    // Initialize displays
+    updateFontSize();
+    applyTheme();
+    updateLanguageTexts();
+});
+</script>
+
+{% endblock %}

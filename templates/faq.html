@@ -2,108 +2,186 @@
 {% block title %}Community Forum{% endblock %}
 
 {% block content %}
-
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FAQ Section</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f4f4;
-        }
-        .container {
-            width: 80%;
-            margin: 50px auto;
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-        h1 {
-            text-align: center;
-            color: #333;
-        }
-        .faq-item {
-            margin-bottom: 15px;
-        }
-        .faq-item button {
-            width: 100%;
-            padding: 15px;
-            text-align: left;
-            background-color: #008CBA;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 18px;
-            cursor: pointer;
-            box-sizing: border-box;
-        }
-        .faq-item button:hover {
-            background-color: #005f73;
-        }
-        .answer {
-            padding: 15px;
-            background-color: #f9f9f9;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            display: none;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>FAQ</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      background: #fff;
+      color: #1a1a1a;
+    }
+
+    .tabs {
+      display: flex;
+      justify-content: center;
+      gap: 3rem;
+      font-weight: bold;
+      margin-bottom: 2rem;
+    }
+
+    .tabs div {
+      cursor: pointer;
+    }
+
+    .tabs .active {
+      color: #d15d5d;
+    }
+
+    .faq-section {
+      max-width: 700px;
+      margin: auto;
+      text-align: left;
+    }
+
+    .faq-question {
+      font-weight: bold;
+      margin-top: 2rem;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .faq-question::before {
+      content: "+";
+      margin-right: 10px;
+    }
+
+    .faq-question.open::before {
+      content: "-";
+    }
+
+    .faq-answer {
+      display: none;
+      margin-top: 0.5rem;
+      color: #666;
+      line-height: 1.6;
+    }
+
+    .faq-question.open + .faq-answer {
+      display: block;
+    }
+
+    .contact-section {
+      margin-top: 4rem;
+    }
+
+    .contact-button {
+      background-color: #d15d5d;
+      color: #fff;
+      padding: 1rem 2rem;
+      text-transform: uppercase;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .contact-button:hover {
+      background-color: #b44d4d;
+    }
+
+    .faq-content {
+      display: none;
+    }
+    .faq-content.active {
+      display: block;
+    }
+  </style>
 </head>
 <body>
 
-    <div class="container">
-        <h1>Frequently Asked Questions (FAQ)</h1>
+  <h1>FAQ</h1>
 
-        <div class="faq-item">
-            <button onclick="toggleAnswer('answer1')">What is Python?</button>
-            <div id="answer1" class="answer">
-                Python is a high-level, interpreted programming language known for its readability and versatility.
-            </div>
-        </div>
+  <div class="tabs">
+    <div class="tab" data-tab="product">PLACEHOLDER</div>
+    <div class="tab active" data-tab="subscriptions">PLACEHOLDER</div>
+    <div class="tab" data-tab="shipping">PLACEHOLDER</div>
+    <div class="tab" data-tab="returns">PLACEHOLDER</div>
+    <div class="tab" data-tab="other">PLACEHOLDER</div>
+  </div>
 
-        <div class="faq-item">
-            <button onclick="toggleAnswer('answer2')">How do I install Python?</button>
-            <div id="answer2" class="answer">
-                You can install Python by visiting the official website at <a href="https://www.python.org/downloads/" target="_blank">python.org/downloads</a>.
-            </div>
-        </div>
-
-        <div class="faq-item">
-            <button onclick="toggleAnswer('answer3')">What is a variable?</button>
-            <div id="answer3" class="answer">
-                A variable is a reserved memory location to store values that can be used and modified during a program's execution.
-            </div>
-        </div>
-
-        <div class="faq-item">
-            <button onclick="toggleAnswer('answer4')">What is a function in Python?</button>
-            <div id="answer4" class="answer">
-                A function is a block of reusable code that performs a specific task and can be called multiple times.
-            </div>
-        </div>
-
-        <div class="faq-item">
-            <button onclick="toggleAnswer('answer5')">How do I create a list in Python?</button>
-            <div id="answer5" class="answer">
-                A list is created by placing values inside square brackets, e.g., <code>my_list = [1, 2, 3]</code>.
-            </div>
-        </div>
+  <div class="faq-section">
+    <div id="product" class="faq-content">
+      <div class="faq-question">Do you offer product discounts?</div>
+      <div class="faq-answer">
+        We offer discounts on certain products. Please check the product pages for details.
+      </div>
     </div>
 
-    <script>
-        function toggleAnswer(id) {
-            var answer = document.getElementById(id);
-            if (answer.style.display === "block") {
-                answer.style.display = "none";
-            } else {
-                answer.style.display = "block";
-            }
-        }
-    </script>
+    <div id="subscriptions" class="faq-content active">
+      <div class="faq-question open">DO YOU OFFER SUBSCRIPTION DISCOUNTS?</div>
+      <div class="faq-answer">
+        Of course we do. What kind of self-respecting online brand would we be if we didn’t? Plus-- and this is completely objective--our products are specifically designed to be enjoyed every day, so, if that’s what you’re doing, you should be rewarded for it. By us. Hence, the discount.
+        <br><br>
+        Subscriptions are 10% off the single purchase price and there are sometimes additional discounts if you purchase multiple quantities. You should be able to easily scan the price/glass breakdown in each product page.
+      </div>
+
+      <div class="faq-question">CAN I PAUSE OR CANCEL MY SUBSCRIPTION?</div>
+      <div class="faq-answer">
+        Yes, you can pause or cancel your subscription anytime through your account settings.
+      </div>
+
+      <div class="faq-question">WILL I BE ABLE TO EASILY MANAGE MY ACCOUNT? FOR EXAMPLE, CAN I CHANGE MY SHIPPING ADDRESS OR PAYMENT INFO?</div>
+      <div class="faq-answer">
+        Absolutely. You’ll be able to manage your account details, including shipping address and payment information, easily from your dashboard.
+      </div>
+    </div>
+
+    <div id="shipping" class="faq-content">
+      <div class="faq-question">What are your shipping options?</div>
+      <div class="faq-answer">
+        We offer a variety of shipping options. Check our shipping page for more information.
+      </div>
+    </div>
+
+    <div id="returns" class="faq-content">
+      <div class="faq-question">What is your return policy?</div>
+      <div class="faq-answer">
+        We accept returns within 30 days of purchase. Refer to our returns page for more details.
+      </div>
+    </div>
+
+    <div id="other" class="faq-content">
+      <div class="faq-question">How can I contact support?</div>
+      <div class="faq-answer">
+        You can contact our support team via the "Contact Us" button at the bottom of the page.
+      </div>
+    </div>
+  </div>
+
+  <div class="contact-section">
+    <h2>HAVE SOMETHING NOT BEING ADDRESSED?</h2>
+    <button class="contact-button">CONTACT US</button>
+  </div>
+
+  <script>
+    const tabs = document.querySelectorAll('.tab');
+    const faqContents = document.querySelectorAll('.faq-content');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+
+        const tabContent = tab.getAttribute('data-tab');
+
+        faqContents.forEach(content => {
+          content.classList.remove('active');
+        });
+
+        document.getElementById(tabContent).classList.add('active');
+      });
+    });
+
+    const questions = document.querySelectorAll('.faq-question');
+    questions.forEach(q => {
+      q.addEventListener('click', () => {
+        q.classList.toggle('open');
+      });
+    });
+  </script>
 
 </body>
 </html>
