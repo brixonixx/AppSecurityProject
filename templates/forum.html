@@ -373,7 +373,18 @@
               <a href="{{ url_for('forum.view_post', post_id=post.id) }}" class="btn btn-sm btn-outline-primary me-2">
                 View Post
               </a>
-              {% if session['username'] == post.author %}
+              
+              <!-- Debug info - Remove this after testing -->
+              <small style="color: red; display: block; margin: 5px 0;">
+                Debug: current_user = "{{ current_user.username if current_user.is_authenticated else 'NOT_LOGGED_IN' }}" | 
+                session user = "{{ session.get('username', 'NOT_SET') }}" | 
+                post author = "{{ post.author }}" | 
+                current_user match = {{ current_user.username == post.author if current_user.is_authenticated else False }} |
+                session match = {{ session.get('username') == post.author }}
+              </small>
+              
+              <!-- Fixed delete button using current_user -->
+              {% if current_user.is_authenticated and current_user.username == post.author %}
                 <form method="POST" action="{{ url_for('forum.delete_post', post_id=post.id) }}" class="d-inline">
                   <button type="submit" class="btn btn-sm btn-danger"
                           onclick="return confirm('Are you sure you want to delete this post?');">
