@@ -1,23 +1,10 @@
 # forum.py - Forum routes and functionality
-from flask import render_template, request, redirect, url_for, flash, session, jsonify, Blueprint
-from flask_login import LoginManager, login_user, login_required, current_user
-from werkzeug.utils import secure_filename
-
-forum = Blueprint('forum', __name__)
-
-from forms import *
-from models import *
-from security import log_security_event
-from admin import admin_required, admin
-from auth import allowed_file
-from functools import wraps
-from datetime import datetime
-import os
-import secrets
+from flask import render_template, request, redirect, url_for, flash, session, Blueprint
+from flask_login import login_required, current_user
+from models import db, Post, Comment
 import logging
 
-# Assuming you have a rate_limit decorator - if not, you'll need to import it
-# from your_module import rate_limit
+forum = Blueprint('forum', __name__)
 
 ### ------------------ FORUM ROUTES ------------------- ###
 

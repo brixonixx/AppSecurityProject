@@ -46,10 +46,12 @@ def create_app():
     
     # Register blueprints
     from events import events
+    from forum import forum
     app.register_blueprint(auth, url_prefix='/auth')
     app.register_blueprint(simple_google_auth, url_prefix='')  # Fixed Google auth
     app.register_blueprint(admin, url_prefix='')
     app.register_blueprint(events, url_prefix='/events')
+    app.register_blueprint(forum, url_prefix='/forum')
     
     # Add security headers to all responses
     app.after_request(add_security_headers)
