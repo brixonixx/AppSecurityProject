@@ -77,6 +77,8 @@ def create_app():
                 logger.warning(f"Could not create default profile picture: {e}")
     
     # Routes
+
+    
     @app.route('/')
     def index():
         """Landing page - show to all visitors first"""
@@ -84,6 +86,13 @@ def create_app():
             return redirect(url_for('dashboard'))
         else:
             return render_template('landing.html')
+    # In your Flask app configuration
+    @app.after_request
+    def after_request(response):
+    # Allow Leaflet CDN
+        csp = "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; connect-src 'self' https://*.tile.openstreetmap.org;"
+        response.headers['Content-Security-Policy'] = csp
+        return response
     
     @app.route('/home')
     def home():

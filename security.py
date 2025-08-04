@@ -227,5 +227,15 @@ def add_security_headers(response):
     response.headers['X-Frame-Options'] = 'DENY'
     response.headers['X-XSS-Protection'] = '1; mode=block'
     response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-    response.headers['Content-Security-Policy'] = "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'"
+    
+    # Updated CSP to allow Leaflet maps from unpkg.com and OpenStreetMap tiles
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "style-src 'self' 'unsafe-inline' https://unpkg.com; "
+        "script-src 'self' 'unsafe-inline' https://unpkg.com; "
+        "connect-src 'self' https://*.tile.openstreetmap.org; "
+        "img-src 'self' data: https://*.tile.openstreetmap.org; "
+        "font-src 'self' data:"
+    )
+    
     return response
