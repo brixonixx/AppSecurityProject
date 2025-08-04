@@ -20,7 +20,7 @@
 <!-- Map Section -->
 <div class="mt-4">
   <h2>Current Help Requests</h2>
-  <div id="map" style="height: 400px; width: 100%; border: 1px solid #ccc; margin-top: 15px;"></div>
+  <div id="map"></div>
   <p id="mapStatus" class="text-muted mt-2">Loading help requests...</p>
 </div>
 {% endblock %}
@@ -30,158 +30,93 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+  <style>
+    /* Page-specific CSS */
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    #sendHelpBtn {
+      margin-bottom: 10px;
+    }
+
+    #map {
+      height: 400px;
+      width: 100%;
+      border: 2px solid #ccc;
+      border-radius: 6px;
+      margin-top: 15px;
+    }
+
+    #status, #mapStatus {
+      font-size: 14px;
+      color: #666;
+      margin-top: 10px;
+    }
+  </style>
+
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       console.log('DOM loaded, initializing...');
       
-      // Help request functionality
       const sendHelpBtn = document.getElementById('sendHelpBtn');
       const status = document.getElementById('status');
       const latInput = document.getElementById('latInput');
       const lngInput = document.getElementById('lngInput');
       const helpForm = document.getElementById('helpForm');
 
-      console.log('Elements found:', {
-        sendHelpBtn: !!sendHelpBtn,
-        status: !!status,
-        latInput: !!latInput,
-        lngInput: !!lngInput,
-        helpForm: !!helpForm
-      });
-
       if (sendHelpBtn) {
         sendHelpBtn.addEventListener('click', (e) => {
-          console.log('Send help button clicked');
           e.preventDefault();
-          
           if (!navigator.geolocation) {
             status.textContent = "Geolocation is not supported by your browser.";
-            console.log('Geolocation not supported');
             return;
           }
-          
           status.textContent = "Locating… please allow location access.";
-          console.log('Requesting geolocation...');
-          
           navigator.geolocation.getCurrentPosition(
             (pos) => {
-              console.log('Location found:', pos.coords);
               const lat = pos.coords.latitude.toFixed(6);
               const lng = pos.coords.longitude.toFixed(6);
               latInput.value = lat;
               lngInput.value = lng;
               status.textContent = `Location found: (${lat}, ${lng}). Sending help request...`;
-              console.log('Submitting form...');
               helpForm.submit();
             },
             (error) => {
-              console.error('Geolocation error:', error);
               status.textContent = "Unable to retrieve your location. Error: " + error.message;
             },
-            {
-              enableHighAccuracy: true,
-              timeout: 10000,
-              maximumAge: 60000
-            }
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
           );
         });
       }
 
-      // Map functionality
-      console.log('Initializing map...');
-      let map;
-      try {
-        // Wait for Leaflet to be fully loaded
-        if (typeof L === 'undefined') {
-          console.error('Leaflet library not loaded');
-          document.getElementById('mapStatus').textContent = "Map library failed to load";
-          return;
-        }
-        
-        map = L.map('map').setView([1.3521, 103.8198], 11);
-        console.log('Map created successfully');
-      } catch (error) {
-        console.error('Error creating map:', error);
-        document.getElementById('mapStatus').textContent = "Error initializing map: " + error.message;
-        return;
-      }
+      let map = L.map('map').setView([1.3521, 103.8198], 11);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 19
+      }).addTo(map);
 
-      const markers = {};
       const mapStatus = document.getElementById('mapStatus');
-
-      try {
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-          maxZoom: 19
-        }).addTo(map);
-        console.log('Tile layer added');
-        
-        // Force map to resize after initialization
-        setTimeout(() => {
-          map.invalidateSize();
-        }, 100);
-        
-      } catch (error) {
-        console.error('Error adding tile layer:', error);
-        mapStatus.textContent = "Error loading map tiles: " + error.message;
-      }
-
-      function addMarker(request) {
-        try {
-          console.log('Adding marker for request:', request);
-          const marker = L.marker([request.lat, request.lng]).addTo(map);
-          
-          // Simple popup without action buttons - just shows information
-          let popupContent = `<b>${request.title}</b><br>${request.description}`;
-          if (request.claimed_by) {
-            popupContent += `<br><small class="text-muted">Claimed by: ${request.claimed_by}</small>`;
-          }
-          // Add requester info
-          if (request.requester) {
-            popupContent += `<br><small class="text-info">Requested by: ${request.requester}</small>`;
-          }
-          marker.bindPopup(popupContent);
-          markers[request.id] = marker;
-          console.log('Marker added successfully');
-        } catch (error) {
-          console.error('Error adding marker:', error);
-        }
-      }
-
-      // Load and display help requests
-      console.log('Fetching help requests...');
-      const requestsUrl = '{{ url_for("volunteer.volunteer_requests_json") }}';
-      console.log('Requests URL:', requestsUrl);
-      
-      fetch(requestsUrl)
-        .then(res => {
-          console.log('Response status:', res.status);
-          if (!res.ok) {
-            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-          }
-          return res.json();
-        })
+      fetch('{{ url_for("volunteer.volunteer_requests_json") }}')
+        .then(res => res.json())
         .then(data => {
-          console.log('Received data:', data);
-          if (!Array.isArray(data)) {
-            throw new Error('Invalid data format received');
-          }
-          
           if (data.length === 0) {
             mapStatus.textContent = "No help requests currently active.";
           } else {
             mapStatus.textContent = `Showing ${data.length} help request(s).`;
             data.forEach(req => {
               if (req.lat && req.lng) {
-                addMarker(req);
-              } else {
-                console.warn('Request missing coordinates:', req);
+                const marker = L.marker([req.lat, req.lng]).addTo(map);
+                let popupContent = `<b>${req.title}</b><br>${req.description}`;
+                if (req.claimed_by) popupContent += `<br><small class="text-muted">Claimed by: ${req.claimed_by}</small>`;
+                if (req.requester) popupContent += `<br><small class="text-info">Requested by: ${req.requester}</small>`;
+                marker.bindPopup(popupContent);
               }
             });
           }
         })
         .catch(error => {
-          console.error('Error fetching requests:', error);
           mapStatus.textContent = "Error loading help requests: " + error.message;
         });
     });
