@@ -616,3 +616,105 @@ def delete_event(event_id):
         logging.exception(f"An exception occured when deleting an event: {e}")
         flash(f"An error occured when deleting event {id}", "danger")
     return redirect(url_for("admin.event_management"))
+
+# Add this route to your admin.py file
+
+@admin.route('/admin/posts')
+@admin_required
+def post_management():
+    """View all posts for management"""
+    page = request.args.get('page', 1, type=int)
+    search = request.args.get('search', '')
+    
+    try:
+        # Base query for posts
+        query = Post.query
+        
+        # Apply search if provided
+        if search:
+            search = sanitize_input(search)
+            query = query.filter(
+                db.or_(
+                    Post.title.contains(search),
+                    Post.content.contains(search),
+                    Post.author.contains(search)
+                )
+            )
+        
+        # Paginate results
+        posts = query.order_by(Post.created_at.desc()).paginate(
+            page=page, per_page=20, error_out=False
+        )
+        
+        # Get total post count
+        total_posts = Post.query.count()
+        
+        log_security_event('Admin viewed post management')
+        
+        return render_template('admin/post_management.html',
+                             posts=posts,
+                             search=search,
+                             total_posts=total_posts)
+    except Exception as e:
+        logging.exception(f"Error in post management: {e}")
+        flash('An error occurred while loading posts.', 'danger')
+        return redirect(url_for('admin.admin_dashboard'))
+
+@admin.route('/admin/posts/delete-all', methods=['POST'])
+@admin_required
+def delete_all_posts():
+    """Delete all posts in the database"""
+    try:
+        # Get confirmation from form
+        confirmation = request.form.get('confirmation', '').lower()
+        
+        if confirmation != 'delete all posts':
+            flash('Confirmation text does not match. Posts were not deleted.', 'error')
+            return redirect(url_for('admin.post_management'))
+        
+        # Count posts before deletion for logging
+        post_count = Post.query.count()
+        
+        if post_count == 0:
+            flash('No posts to delete.', 'info')
+            return redirect(url_for('admin.post_management'))
+        
+        # Delete all posts
+        Post.query.delete()
+        db.session.commit()
+        
+        log_security_event(f'Admin deleted all posts (count: {post_count})', success=True, 
+                          details=f'Deleted {post_count} posts from database')
+        
+        flash(f'Successfully deleted all {post_count} posts from the database!', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        logging.exception(f"An exception occurred when deleting all posts: {e}")
+        log_security_event('Admin failed to delete all posts', success=False, 
+                          details=f'Error: {str(e)}')
+        flash("An error occurred when deleting all posts", "danger")
+    
+    return redirect(url_for('admin.post_management'))
+
+@admin.route('/admin/posts/delete/<int:post_id>', methods=['POST'])
+@admin_required
+def delete_single_post(post_id):
+    """Delete a single post by ID"""
+    try:
+        post = Post.query.get_or_404(post_id)
+        post_title = post.title
+        post_author = post.author
+        
+        db.session.delete(post)
+        db.session.commit()
+        
+        log_security_event(f'Admin deleted post: {post_title} by {post_author}')
+        flash(f'Post "{post_title}" deleted successfully!', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        logging.exception(f"An exception occurred when deleting post {post_id}: {e}")
+        flash("An error occurred when deleting the post", "danger")
+    
+    return redirect(url_for('admin.post_management'))
