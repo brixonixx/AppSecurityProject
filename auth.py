@@ -253,12 +253,6 @@ def profile():
     form = ProfileForm()
 
     if form.validate_on_submit():
-        # ✅ CSRF token check (if you added CSRF manually)
-        token = request.form.get('csrf_token')
-        if not validate_csrf_token(token):
-            flash('Invalid request token. Please try again.', 'error')
-            return redirect(url_for('auth.profile'))
-
         # ✅ Handle profile picture with secure filename
         if form.profile_picture.data:
             file = form.profile_picture.data
@@ -271,10 +265,10 @@ def profile():
             file.save(upload_path)
             current_user.profile_picture = safe_filename
 
-        # ✅ Sanitize all user inputs before saving
+        # ✅ Sanitize all user inputs
         current_user.first_name = sanitize_input(form.first_name.data)
         current_user.last_name = sanitize_input(form.last_name.data)
-        current_user.age = sanitize_input(str(form.age.data))  # Cast to string to sanitize safely
+        current_user.age = sanitize_input(str(form.age.data))
         current_user.contact_number = sanitize_input(form.contact_number.data)
 
         db.session.commit()
@@ -283,7 +277,6 @@ def profile():
         return redirect(url_for('auth.profile'))
 
     elif request.method == 'GET':
-        # Pre-fill form with current user data
         form.first_name.data = current_user.first_name
         form.last_name.data = current_user.last_name
         form.age.data = current_user.age
@@ -299,19 +292,11 @@ def change_password():
     form = ChangePasswordForm()
 
     if form.validate_on_submit():
-        # ✅ CSRF token validation
-        token = request.form.get('csrf_token')
-        if not validate_csrf_token(token):
-            flash('Invalid request token. Please try again.', 'error')
-            return redirect(url_for('auth.change_password'))
-
         if current_user.check_password(form.current_password.data):
-            # ✅ Check password history to prevent reuse
             if current_user.check_password_history(form.new_password.data):
                 flash('You cannot reuse a recent password. Please choose a different password.', 'error')
                 return redirect(url_for('auth.change_password'))
 
-            # ✅ Set new password securely
             current_user.set_password(form.new_password.data)
             db.session.commit()
 
@@ -323,6 +308,7 @@ def change_password():
             log_security_event(f'Failed password change attempt: {current_user.username}', success=False)
 
     return render_template('change_password.html', form=form)
+
 
 # =============================================================================
 # SECURITY SETTINGS AND 2FA ROUTES
