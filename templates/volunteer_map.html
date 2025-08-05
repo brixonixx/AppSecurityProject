@@ -55,7 +55,7 @@
       function addMarker(request) {
         const marker = L.marker([request.lat, request.lng]).addTo(map);
         
-        // Enhanced popup with more information and actions
+        // Enhanced popup with more information and actions (without claim button)
         let popupContent = `<b>${request.title}</b><br>${request.description}`;
         
         if (request.requester) {
@@ -66,13 +66,9 @@
           popupContent += `<br><small class="text-warning">Claimed by: ${request.claimed_by}</small>`;
         }
         
-        // Add action buttons for volunteers
+        // Add action buttons for volunteers (removed claim button)
         if (request.can_go) {
           popupContent += `<br><div class="mt-2">`;
-          
-          if (!request.claimed_by) {
-            popupContent += `<button class="btn btn-warning btn-sm me-1" onclick="claimRequest(${request.id})">Claim</button>`;
-          }
           
           popupContent += `<button class="btn btn-success btn-sm" onclick="goToRequest(${request.id})">Go To</button>`;
           
@@ -159,35 +155,6 @@
         .catch(error => {
           console.error('Error accepting request:', error);
           status.textContent = "Error accepting request.";
-        });
-      };
-
-      // Claim request function with proper JSON handling
-      window.claimRequest = function (requestId) {
-        if (!confirm("Do you want to claim this request?")) return;
-        
-        fetch(`{{ url_for('volunteer.claim_volunteer_request', request_id=0) }}`.replace('0', requestId), { 
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
-          }
-        })
-        .then(res => res.json())
-        .then(result => {
-          if (result.success) {
-            status.textContent = "Request claimed! Refreshing map...";
-            // Refresh the page to show updated claim status
-            setTimeout(() => {
-              window.location.reload();
-            }, 1000);
-          } else {
-            status.textContent = result.error || "Failed to claim request.";
-          }
-        })
-        .catch(error => {
-          console.error('Error claiming request:', error);
-          status.textContent = "Error claiming request.";
         });
       };
 
