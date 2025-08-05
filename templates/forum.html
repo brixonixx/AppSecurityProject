@@ -1,374 +1,374 @@
-{% extends "base.html" %}
-{% block title %}Community Forum{% endblock %}
+    {% extends "base.html" %}
+    {% block title %}Community Forum{% endblock %}
 
-{% block content %}
-<style>
-/* Forum Page CSS Override - Integrated styling */
+    {% block content %}
+    <style>
+    /* Forum Page CSS Override - Integrated styling */
 
-/* Forum-specific container styling to override global styles */
-.container.mt-4 {
-    max-width: 1200px !important;
-    margin: 0 auto !important;
-    padding: 20px !important;
-    margin-top: 1.5rem !important;
-}
-
-/* Forum header section */
-.container .d-flex.justify-content-between {
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    margin-bottom: 1rem !important;
-    flex-wrap: wrap !important;
-    gap: 15px !important;
-}
-
-.container .d-flex h2.mb-0 {
-    color: var(--primary-color) !important;
-    font-size: 32px !important;
-    font-weight: 700 !important;
-    margin: 0 !important;
-}
-
-/* New Post button styling */
-.container .btn-success {
-    background: linear-gradient(135deg, var(--success-color), #38a169) !important;
-    color: white !important;
-    padding: 12px 24px !important;
-    font-size: 16px !important;
-    font-weight: 600 !important;
-    border: none !important;
-    border-radius: 8px !important;
-    text-decoration: none !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    gap: 8px !important;
-    transition: all 0.3s ease !important;
-    box-shadow: 0 2px 8px rgba(72, 187, 120, 0.3) !important;
-}
-
-.container .btn-success:hover {
-    background: linear-gradient(135deg, #38a169, #2f855a) !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4) !important;
-    color: white !important;
-    text-decoration: none !important;
-}
-
-/* Forum post cards - Override global card styles */
-.container .card.mb-3 {
-    background: white !important;
-    border: 1px solid #e2e8f0 !important;
-    border-radius: 12px !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
-    margin-bottom: 20px !important;
-    transition: all 0.3s ease !important;
-    overflow: hidden !important;
-}
-
-.container .card.mb-3:hover {
-    transform: translateY(-3px) !important;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.12) !important;
-}
-
-/* Card body styling */
-.container .card-body {
-    padding: 25px !important;
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 15px !important;
-}
-
-/* Post title styling */
-.container .card-title {
-    margin: 0 !important;
-    font-size: 22px !important;
-    font-weight: 600 !important;
-    line-height: 1.3 !important;
-}
-
-.container .card-title a {
-    color: var(--dark-text) !important;
-    text-decoration: none !important;
-    transition: color 0.3s ease !important;
-}
-
-.container .card-title a:hover {
-    color: var(--primary-color) !important;
-    text-decoration: none !important;
-}
-
-/* Post metadata section */
-.container .d-flex.justify-content-between.align-items-center {
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    flex-wrap: wrap !important;
-    gap: 15px !important;
-    margin-top: auto !important;
-}
-
-/* Post subtitle with author and comment count */
-.container .card-subtitle {
-    color: #6c757d !important;
-    font-size: 14px !important;
-    margin: 0 !important;
-    display: flex !important;
-    align-items: center !important;
-    gap: 8px !important;
-    flex-wrap: wrap !important;
-}
-
-.container .card-subtitle .mx-2 {
-    margin: 0 8px !important;
-    color: #cbd5e0 !important;
-}
-
-.container .card-subtitle .fas {
-    margin-right: 4px !important;
-    color: var(--primary-color) !important;
-}
-
-/* Action buttons section */
-.container .card-body > div:last-child {
-    display: flex !important;
-    align-items: center !important;
-    gap: 10px !important;
-    flex-wrap: wrap !important;
-}
-
-/* View Post button */
-.container .btn-outline-primary {
-    background: transparent !important;
-    color: var(--primary-color) !important;
-    border: 2px solid var(--primary-color) !important;
-    padding: 8px 16px !important;
-    font-size: 14px !important;
-    font-weight: 600 !important;
-    border-radius: 6px !important;
-    text-decoration: none !important;
-    transition: all 0.3s ease !important;
-    display: inline-flex !important;
-    align-items: center !important;
-}
-
-.container .btn-outline-primary:hover {
-    background: var(--primary-color) !important;
-    color: white !important;
-    transform: translateY(-1px) !important;
-    text-decoration: none !important;
-}
-
-/* Delete button styling */
-.container .btn-danger {
-    background: #dc3545 !important;
-    color: white !important;
-    border: 2px solid #dc3545 !important;
-    padding: 8px 16px !important;
-    font-size: 14px !important;
-    font-weight: 600 !important;
-    border-radius: 6px !important;
-    cursor: pointer !important;
-    transition: all 0.3s ease !important;
-    display: inline-block !important;
-}
-
-.container .btn-danger:hover {
-    background: #c82333 !important;
-    border-color: #c82333 !important;
-    transform: translateY(-1px) !important;
-    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4) !important;
-    color: white !important;
-}
-
-.container .btn-danger:focus {
-    outline: 2px solid #dc3545 !important;
-    outline-offset: 2px !important;
-}
-
-/* Delete form styling */
-.container .card-body form.d-inline {
-    display: inline-block !important;
-    margin: 0 !important;
-    padding: 0 !important;
-}
-
-/* Empty state styling */
-.container .text-center.py-5 {
-    text-align: center !important;
-    padding: 60px 20px !important;
-    background: white !important;
-    border-radius: 12px !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
-}
-
-.container .text-center.py-5 .fas {
-    color: #cbd5e0 !important;
-    font-size: 4rem !important;
-    margin-bottom: 20px !important;
-    display: block !important;
-}
-
-.container .text-center.py-5 p {
-    color: #6c757d !important;
-    font-size: 18px !important;
-    margin: 0 !important;
-}
-
-/* Bootstrap utility class overrides for forum page */
-.container .mb-3 {
-    margin-bottom: 1rem !important;
-}
-
-.container .mb-0 {
-    margin-bottom: 0 !important;
-}
-
-.container .me-2 {
-    margin-right: 0.5rem !important;
-}
-
-.container .small {
-    font-size: 0.875rem !important;
-}
-
-.container .text-muted {
-    color: #6c757d !important;
-}
-
-.container .text-dark {
-    color: #212529 !important;
-}
-
-.container .text-decoration-none {
-    text-decoration: none !important;
-}
-
-.container .shadow-sm {
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
-}
-
-/* Responsive design for forum page */
-@media (max-width: 768px) {
-    .container .d-flex.justify-content-between {
-        flex-direction: column !important;
-        align-items: stretch !important;
-        gap: 20px !important;
-    }
-
-    .container .d-flex h2.mb-0 {
-        font-size: 28px !important;
-        text-align: center !important;
-    }
-
-    .container .btn-success {
-        width: 100% !important;
-        justify-content: center !important;
-    }
-
-    .container .card-body {
+    /* Forum-specific container styling to override global styles */
+    .container.mt-4 {
+        max-width: 1200px !important;
+        margin: 0 auto !important;
         padding: 20px !important;
+        margin-top: 1.5rem !important;
     }
 
-    .container .card-title {
-        font-size: 20px !important;
-    }
-
-    .container .d-flex.justify-content-between.align-items-center {
-        flex-direction: column !important;
-        align-items: stretch !important;
+    /* Forum header section */
+    .container .d-flex.justify-content-between {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        margin-bottom: 1rem !important;
+        flex-wrap: wrap !important;
         gap: 15px !important;
     }
 
-    .container .card-subtitle {
-        justify-content: center !important;
-        text-align: center !important;
+    .container .d-flex h2.mb-0 {
+        color: var(--primary-color) !important;
+        font-size: 32px !important;
+        font-weight: 700 !important;
+        margin: 0 !important;
     }
 
-    .container .card-body > div:last-child {
-        justify-content: center !important;
+    /* New Post button styling */
+    .container .btn-success {
+        background: linear-gradient(135deg, var(--success-color), #38a169) !important;
+        color: white !important;
+        padding: 12px 24px !important;
+        font-size: 16px !important;
+        font-weight: 600 !important;
+        border: none !important;
+        border-radius: 8px !important;
+        text-decoration: none !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+        transition: all 0.3s ease !important;
+        box-shadow: 0 2px 8px rgba(72, 187, 120, 0.3) !important;
+    }
+
+    .container .btn-success:hover {
+        background: linear-gradient(135deg, #38a169, #2f855a) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4) !important;
+        color: white !important;
+        text-decoration: none !important;
+    }
+
+    /* Forum post cards - Override global card styles */
+    .container .card.mb-3 {
+        background: white !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 12px !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+        margin-bottom: 20px !important;
+        transition: all 0.3s ease !important;
+        overflow: hidden !important;
+    }
+
+    .container .card.mb-3:hover {
+        transform: translateY(-3px) !important;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.12) !important;
+    }
+
+    /* Card body styling */
+    .container .card-body {
+        padding: 25px !important;
+        display: flex !important;
         flex-direction: column !important;
+        gap: 15px !important;
+    }
+
+    /* Post title styling */
+    .container .card-title {
+        margin: 0 !important;
+        font-size: 22px !important;
+        font-weight: 600 !important;
+        line-height: 1.3 !important;
+    }
+
+    .container .card-title a {
+        color: var(--dark-text) !important;
+        text-decoration: none !important;
+        transition: color 0.3s ease !important;
+    }
+
+    .container .card-title a:hover {
+        color: var(--primary-color) !important;
+        text-decoration: none !important;
+    }
+
+    /* Post metadata section */
+    .container .d-flex.justify-content-between.align-items-center {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        flex-wrap: wrap !important;
+        gap: 15px !important;
+        margin-top: auto !important;
+    }
+
+    /* Post subtitle with author and comment count */
+    .container .card-subtitle {
+        color: #6c757d !important;
+        font-size: 14px !important;
+        margin: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+        flex-wrap: wrap !important;
+    }
+
+    .container .card-subtitle .mx-2 {
+        margin: 0 8px !important;
+        color: #cbd5e0 !important;
+    }
+
+    .container .card-subtitle .fas {
+        margin-right: 4px !important;
+        color: var(--primary-color) !important;
+    }
+
+    /* Action buttons section */
+    .container .card-body > div:last-child {
+        display: flex !important;
+        align-items: center !important;
         gap: 10px !important;
+        flex-wrap: wrap !important;
     }
 
-    .container .btn-outline-primary,
+    /* View Post button */
+    .container .btn-outline-primary {
+        background: transparent !important;
+        color: var(--primary-color) !important;
+        border: 2px solid var(--primary-color) !important;
+        padding: 8px 16px !important;
+        font-size: 14px !important;
+        font-weight: 600 !important;
+        border-radius: 6px !important;
+        text-decoration: none !important;
+        transition: all 0.3s ease !important;
+        display: inline-flex !important;
+        align-items: center !important;
+    }
+
+    .container .btn-outline-primary:hover {
+        background: var(--primary-color) !important;
+        color: white !important;
+        transform: translateY(-1px) !important;
+        text-decoration: none !important;
+    }
+
+    /* Delete button styling */
     .container .btn-danger {
-        width: 100% !important;
-        justify-content: center !important;
+        background: #dc3545 !important;
+        color: white !important;
+        border: 2px solid #dc3545 !important;
+        padding: 8px 16px !important;
+        font-size: 14px !important;
+        font-weight: 600 !important;
+        border-radius: 6px !important;
+        cursor: pointer !important;
+        transition: all 0.3s ease !important;
+        display: inline-block !important;
     }
-}
 
-/* Fix for any remaining global style conflicts */
-.container * {
-    box-sizing: border-box !important;
-}
+    .container .btn-danger:hover {
+        background: #c82333 !important;
+        border-color: #c82333 !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4) !important;
+        color: white !important;
+    }
 
-/* Ensure form elements maintain proper styling */
-.container form {
-    margin: 0 !important;
-    padding: 0 !important;
-}
+    .container .btn-danger:focus {
+        outline: 2px solid #dc3545 !important;
+        outline-offset: 2px !important;
+    }
 
-/* Additional button size classes if needed */
-.container .btn-sm {
-    padding: 6px 12px !important;
-    font-size: 14px !important;
-    border-radius: 4px !important;
-}
+    /* Delete form styling */
+    .container .card-body form.d-inline {
+        display: inline-block !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
 
-/* Icon styling within buttons */
-.container .btn i {
-    margin-right: 5px !important;
-    font-size: 14px !important;
-}
-</style>
+    /* Empty state styling */
+    .container .text-center.py-5 {
+        text-align: center !important;
+        padding: 60px 20px !important;
+        background: white !important;
+        border-radius: 12px !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+    }
 
-<div class="container mt-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0">Community Forum</h2>
-    <a href="{{ url_for('forum.new_post') }}" class="btn btn-success">+ New Post</a>
-  </div>
+    .container .text-center.py-5 .fas {
+        color: #cbd5e0 !important;
+        font-size: 4rem !important;
+        margin-bottom: 20px !important;
+        display: block !important;
+    }
 
-  {% if posts %}
-    {% for post in posts %}
-      <div class="card mb-3 shadow-sm">
-        <div class="card-body">
-          <h5 class="card-title">
-            <a href="{{ url_for('forum.view_post', post_id=post.id) }}" class="text-decoration-none text-dark">
-              {{ post.title }}
-            </a>
-          </h5>
+    .container .text-center.py-5 p {
+        color: #6c757d !important;
+        font-size: 18px !important;
+        margin: 0 !important;
+    }
 
-          <div class="d-flex justify-content-between align-items-center">
-            <p class="card-subtitle text-muted small mb-0">
-              Posted by {{ post.author }}
-              <span class="mx-2">•</span>
-              <i class="fas fa-comments"></i> {{ post.comment_count or 0 }} comments
-            </p>
+    /* Bootstrap utility class overrides for forum page */
+    .container .mb-3 {
+        margin-bottom: 1rem !important;
+    }
 
-            <div>
-              <a href="{{ url_for('forum.view_post', post_id=post.id) }}" class="btn btn-sm btn-outline-primary me-2">
-                View Post
-              </a>
-              
-              {% if current_user.is_authenticated and current_user.username == post.author %}
-                <form method="POST" action="{{ url_for('forum.delete_post', post_id=post.id) }}" class="d-inline">
-                  <button type="submit" class="btn btn-sm btn-danger"
-                          onclick="return confirm('Are you sure you want to delete this post?');">
-                    Delete
-                  </button>
-                </form>
-              {% endif %}
-            </div>
-          </div>
-        </div>
-      </div>
-    {% endfor %}
-  {% else %}
-    <div class="text-center py-5">
-      <i class="fas fa-comments fa-3x text-muted mb-3"></i>
-      <p class="text-muted">No posts yet. Be the first to post!</p>
+    .container .mb-0 {
+        margin-bottom: 0 !important;
+    }
+
+    .container .me-2 {
+        margin-right: 0.5rem !important;
+    }
+
+    .container .small {
+        font-size: 0.875rem !important;
+    }
+
+    .container .text-muted {
+        color: #6c757d !important;
+    }
+
+    .container .text-dark {
+        color: #212529 !important;
+    }
+
+    .container .text-decoration-none {
+        text-decoration: none !important;
+    }
+
+    .container .shadow-sm {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
+    }
+
+    /* Responsive design for forum page */
+    @media (max-width: 768px) {
+        .container .d-flex.justify-content-between {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 20px !important;
+        }
+
+        .container .d-flex h2.mb-0 {
+            font-size: 28px !important;
+            text-align: center !important;
+        }
+
+        .container .btn-success {
+            width: 100% !important;
+            justify-content: center !important;
+        }
+
+        .container .card-body {
+            padding: 20px !important;
+        }
+
+        .container .card-title {
+            font-size: 20px !important;
+        }
+
+        .container .d-flex.justify-content-between.align-items-center {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 15px !important;
+        }
+
+        .container .card-subtitle {
+            justify-content: center !important;
+            text-align: center !important;
+        }
+
+        .container .card-body > div:last-child {
+            justify-content: center !important;
+            flex-direction: column !important;
+            gap: 10px !important;
+        }
+
+        .container .btn-outline-primary,
+        .container .btn-danger {
+            width: 100% !important;
+            justify-content: center !important;
+        }
+    }
+
+    /* Fix for any remaining global style conflicts */
+    .container * {
+        box-sizing: border-box !important;
+    }
+
+    /* Ensure form elements maintain proper styling */
+    .container form {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Additional button size classes if needed */
+    .container .btn-sm {
+        padding: 6px 12px !important;
+        font-size: 14px !important;
+        border-radius: 4px !important;
+    }
+
+    /* Icon styling within buttons */
+    .container .btn i {
+        margin-right: 5px !important;
+        font-size: 14px !important;
+    }
+    </style>
+
+    <div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">Community Forum</h2>
+        <a href="{{ url_for('forum.new_post') }}" class="btn btn-success">+ New Post</a>
     </div>
-  {% endif %}
-</div>
-{% endblock %}
+
+    {% if posts %}
+        {% for post in posts %}
+        <div class="card mb-3 shadow-sm">
+            <div class="card-body">
+            <h5 class="card-title">
+                <a href="{{ url_for('forum.view_post', post_id=post.id) }}" class="text-decoration-none text-dark">
+                {{ post.title }}
+                </a>
+            </h5>
+
+            <div class="d-flex justify-content-between align-items-center">
+                <p class="card-subtitle text-muted small mb-0">
+                Posted by {{ post.author }}
+                <span class="mx-2">•</span>
+                <i class="fas fa-comments"></i> {{ post.comment_count or 0 }} comments
+                </p>
+
+                <div>
+                <a href="{{ url_for('forum.view_post', post_id=post.id) }}" class="btn btn-sm btn-outline-primary me-2">
+                    View Post
+                </a>
+                
+                {% if current_user.is_authenticated and current_user.username == post.author %}
+                    <form method="POST" action="{{ url_for('forum.delete_post', post_id=post.id) }}" class="d-inline">
+                    <button type="submit" class="btn btn-sm btn-danger"
+                            onclick="return confirm('Are you sure you want to delete this post?');">
+                        Delete
+                    </button>
+                    </form>
+                {% endif %}
+                </div>
+            </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="text-center py-5">
+        <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+        <p class="text-muted">No posts yet. Be the first to post!</p>
+        </div>
+    {% endif %}
+    </div>
+    {% endblock %}
