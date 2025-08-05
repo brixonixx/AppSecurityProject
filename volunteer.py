@@ -249,7 +249,6 @@ def volunteer_requests_json():
                 "id": r.id,
                 "title": escape(r.title) if r.title else "Help Request",
                 "description": escape(r.description) if r.description else "User requested help",
-
                 "lat": float(r.latitude) if r.latitude else None,
                 "lng": float(r.longitude) if r.longitude else None,
                 "claimed_by": r.claimed_by,
