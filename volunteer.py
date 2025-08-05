@@ -63,8 +63,9 @@ def volunteer_request():
         try:
             lat = request.form.get('lat', type=float)
             lng = request.form.get('lng', type=float)
-            title = request.form.get('title', 'Help Request')
-            description = request.form.get('description', 'User requested help')
+            title = sanitize_input(request.form.get('title', 'Help Request'))
+            description = sanitize_input(request.form.get('description', 'User requested help'))
+
             username = get_current_username()
 
             if lat is None or lng is None:
@@ -246,8 +247,9 @@ def volunteer_requests_json():
             
             result.append({
                 "id": r.id,
-                "title": r.title if r.title else "Help Request",
-                "description": r.description if r.description else "User requested help",
+                "title": escape(r.title) if r.title else "Help Request",
+                "description": escape(r.description) if r.description else "User requested help",
+
                 "lat": float(r.latitude) if r.latitude else None,
                 "lng": float(r.longitude) if r.longitude else None,
                 "claimed_by": r.claimed_by,
