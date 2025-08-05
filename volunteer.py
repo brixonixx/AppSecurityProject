@@ -233,16 +233,20 @@ def volunteer_requests_json():
         result = []
         
         for r in requests:
+            # Ensure we have valid requester information
+            requester_name = r.requester if r.requester else "Anonymous"
+            
             result.append({
                 "id": r.id,
-                "title": r.title,
-                "description": r.description,
-                "lat": r.latitude,
-                "lng": r.longitude,
+                "title": r.title if r.title else "Help Request",
+                "description": r.description if r.description else "User requested help",
+                "lat": float(r.latitude) if r.latitude else None,
+                "lng": float(r.longitude) if r.longitude else None,
                 "claimed_by": r.claimed_by,
                 "is_owner": (r.requester == current_username),
                 "can_go": is_volunteer,
-                "requester": r.requester
+                "requester": requester_name,  # This will show proper username
+                "created_at": r.created_at.strftime("%Y-%m-%d %H:%M") if hasattr(r, 'created_at') and r.created_at else None
             })
             
         return jsonify(result)
