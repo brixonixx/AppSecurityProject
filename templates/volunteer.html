@@ -1,182 +1,40 @@
 {% extends "base.html" %}
 {% block title %}Send Help{% endblock %}
 
-{% block content %}
-<!-- Inline CSS to override ANY conflicts -->
-<style>
-/* CRITICAL: Map display fixes - override everything */
-#map {
-    height: 400px !important;
-    width: 100% !important;
-    min-height: 400px !important;
-    max-width: 100% !important;
-    border: 2px solid #007bff !important;
-    border-radius: 8px !important;
-    background-color: #f8f9fa !important;
-    margin: 15px 0 !important;
-    padding: 0 !important;
-    display: block !important;
-    position: relative !important;
-    z-index: 100 !important;
-    overflow: hidden !important;
-    box-sizing: border-box !important;
-    clear: both !important;
-}
-
-/* Override any container restrictions */
-.container #map,
-.container-fluid #map,
-div[class*="container"] #map,
-.row #map,
-.col #map,
-div[class*="col"] #map {
-    height: 400px !important;
-    width: 100% !important;
-    max-width: none !important;
-    flex: none !important;
-    flex-basis: auto !important;
-    flex-grow: 0 !important;
-    flex-shrink: 0 !important;
-}
-
-/* Leaflet-specific overrides */
-.leaflet-container {
-    height: 400px !important;
-    width: 100% !important;
-    background: #ddd !important;
-    outline: 0 !important;
-    font-family: inherit !important;
-    position: relative !important;
-    z-index: 1 !important;
-}
-
-.leaflet-map-pane {
-    z-index: 1 !important;
-}
-
-.leaflet-tile-pane {
-    z-index: 1 !important;
-}
-
-.leaflet-overlay-pane {
-    z-index: 2 !important;
-}
-
-.leaflet-marker-pane {
-    z-index: 6 !important;
-}
-
-.leaflet-popup-pane {
-    z-index: 7 !important;
-}
-
-.leaflet-control-container {
-    z-index: 8 !important;
-}
-
-/* Fix image max-width conflicts */
-.leaflet-container img {
-    max-width: none !important;
-    max-height: none !important;
-    width: auto !important;
-    height: auto !important;
-}
-
-.leaflet-tile {
-    display: block !important;
-}
-
-.leaflet-control-zoom-in,
-.leaflet-control-zoom-out {
-    background-color: white !important;
-    color: black !important;
-    width: 30px !important;
-    height: 30px !important;
-    line-height: 30px !important;
-    text-align: center !important;
-    text-decoration: none !important;
-    font-size: 18px !important;
-    display: block !important;
-}
-
-.leaflet-control-attribution {
-    background: rgba(255, 255, 255, 0.7) !important;
-    font-size: 11px !important;
-    color: #333 !important;
-}
-
-/* Status and button styling */
-#mapStatus {
-    padding: 10px !important;
-    background: #e9ecef !important;
-    border: 1px solid #ced4da !important;
-    border-radius: 4px !important;
-    margin-top: 10px !important;
-    font-weight: bold !important;
-    color: #495057 !important;
-}
-
-#status {
-    color: #6c757d !important;
-    margin-top: 10px !important;
-}
-
-.btn {
-    display: inline-block !important;
-    padding: 8px 16px !important;
-    margin: 4px !important;
-    text-decoration: none !important;
-    border-radius: 4px !important;
-    border: 1px solid transparent !important;
-    cursor: pointer !important;
-    font-size: 14px !important;
-}
-
-.btn-primary {
-    background-color: #007bff !important;
-    color: white !important;
-    border-color: #007bff !important;
-}
-
-.btn-success {
-    background-color: #28a745 !important;
-    color: white !important;
-    border-color: #28a745 !important;
-}
-
-.btn:hover {
-    opacity: 0.8 !important;
-}
-
-/* Container fixes */
-.map-container {
-    width: 100% !important;
-    margin: 20px 0 !important;
-    padding: 0 !important;
-}
-
-h1, h2 {
-    color: #333 !important;
-    margin: 20px 0 10px 0 !important;
-}
-
-/* Mobile responsive */
-@media (max-width: 768px) {
+{% block extra_css %}
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    /* Clean map styling without aggressive overrides */
     #map {
-        height: 300px !important;
-        margin: 10px 0 !important;
+      height: 400px;
+      width: 100%;
+      border: 2px solid #007bff;
+      border-radius: 8px;
+      margin: 15px 0;
     }
     
-    .leaflet-container {
-        height: 300px !important;
+    /* Ensure Leaflet images display correctly */
+    .leaflet-container img {
+      max-width: none !important;
     }
-}
-</style>
+    
+    #mapStatus {
+      padding: 10px;
+      background: #e9ecef;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    
+    .map-container {
+      width: 100%;
+      margin: 20px 0;
+    }
+  </style>
+{% endblock %}
 
-<!-- Leaflet CSS and JS -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
+{% block content %}
 <div class="container">
     <h1>Request Help</h1>
 
@@ -203,201 +61,188 @@ h1, h2 {
 </div>
 {% endblock %}
 
-{% block scripts %}
-  {{ super() }}
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+{% block extra_js %}
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Page loaded, initializing...');
-    
-    // Initialize elements
-    const sendHelpBtn = document.getElementById('sendHelpBtn');
-    const status = document.getElementById('status');
-    const latInput = document.getElementById('latInput');
-    const lngInput = document.getElementById('lngInput');
-    const helpForm = document.getElementById('helpForm');
-    const mapStatus = document.getElementById('mapStatus');
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+      console.log('🚀 Page loaded, initializing...');
+      
+      // Initialize elements
+      const sendHelpBtn = document.getElementById('sendHelpBtn');
+      const status = document.getElementById('status');
+      const latInput = document.getElementById('latInput');
+      const lngInput = document.getElementById('lngInput');
+      const helpForm = document.getElementById('helpForm');
+      const mapStatus = document.getElementById('mapStatus');
 
-    // Help request functionality
-    if (sendHelpBtn) {
-        sendHelpBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            
-            if (!navigator.geolocation) {
-                status.textContent = "Geolocation is not supported by your browser.";
-                status.style.color = "red";
-                return;
-            }
-            
-            status.textContent = "Getting your location...";
-            status.style.color = "blue";
-            
-            navigator.geolocation.getCurrentPosition(
-                function(pos) {
-                    const lat = pos.coords.latitude.toFixed(6);
-                    const lng = pos.coords.longitude.toFixed(6);
-                    latInput.value = lat;
-                    lngInput.value = lng;
-                    status.textContent = `Location found: (${lat}, ${lng}). Sending help request...`;
-                    status.style.color = "green";
-                    helpForm.submit();
-                },
-                function(error) {
-                    status.textContent = "Unable to get your location. Error: " + error.message;
-                    status.style.color = "red";
-                },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 10000,
-                    maximumAge: 60000
-                }
-            );
-        });
-    }
+      // Help request functionality
+      if (sendHelpBtn) {
+          sendHelpBtn.addEventListener('click', function(e) {
+              e.preventDefault();
+              
+              if (!navigator.geolocation) {
+                  status.textContent = "Geolocation is not supported by your browser.";
+                  status.style.color = "red";
+                  return;
+              }
+              
+              status.textContent = "Getting your location...";
+              status.style.color = "blue";
+              
+              navigator.geolocation.getCurrentPosition(
+                  function(pos) {
+                      const lat = pos.coords.latitude.toFixed(6);
+                      const lng = pos.coords.longitude.toFixed(6);
+                      latInput.value = lat;
+                      lngInput.value = lng;
+                      status.textContent = `Location found: (${lat}, ${lng}). Sending help request...`;
+                      status.style.color = "green";
+                      helpForm.submit();
+                  },
+                  function(error) {
+                      status.textContent = "Unable to get your location. Error: " + error.message;
+                      status.style.color = "red";
+                  }
+              );
+          });
+      }
 
-    // Map initialization with strong error handling
-    console.log('Initializing map...');
-    mapStatus.textContent = "Initializing map...";
-    
-    // Wait for page to fully render
-    setTimeout(function() {
-        try {
-            // Check if Leaflet is loaded
-            if (typeof L === 'undefined') {
-                throw new Error('Leaflet library not loaded');
-            }
-            
-            console.log('Creating map...');
-            mapStatus.textContent = "Creating map...";
-            
-            // Get map container and check dimensions
-            const mapContainer = document.getElementById('map');
-            console.log('Map container dimensions:', mapContainer.offsetWidth, 'x', mapContainer.offsetHeight);
-            
-            if (mapContainer.offsetWidth === 0 || mapContainer.offsetHeight === 0) {
-                throw new Error('Map container has zero dimensions');
-            }
-            
-            // Create map - Singapore center
-            const map = L.map('map').setView([1.3521, 103.8198], 11);
-            
-            console.log('Adding tile layer...');
-            mapStatus.textContent = "Loading map tiles...";
-            
-            // Add OpenStreetMap tiles with error handling
-            const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-                maxZoom: 19
-            });
-            
-            tileLayer.on('loading', function() {
-                console.log('Tiles loading...');
-            });
-            
-            tileLayer.on('load', function() {
-                console.log('Tiles loaded successfully!');
-                mapStatus.textContent = "Map loaded successfully!";
-                mapStatus.style.color = "green";
-            });
-            
-            tileLayer.on('tileerror', function(e) {
-                console.error('Tile error:', e);
-                mapStatus.textContent = "Some map tiles failed to load, but map should still work.";
-                mapStatus.style.color = "orange";
-            });
-            
-            tileLayer.addTo(map);
-            
-            // Add a test marker to verify map is working
-            const testMarker = L.marker([1.3521, 103.8198]).addTo(map);
-            testMarker.bindPopup("<b>Test Location</b><br>Singapore - Map is working!").openPopup();
-            
-            console.log('Map created successfully!');
-            
-            // Force map to resize after a delay
-            setTimeout(function() {
-                map.invalidateSize();
-                console.log('Map size invalidated');
-                mapStatus.textContent = "Map ready - showing test marker";
-            }, 500);
-            
-            // Load volunteer requests
-            loadVolunteerRequests(map);
-            
-        } catch (error) {
-            console.error('Map initialization error:', error);
-            mapStatus.textContent = "Error loading map: " + error.message;
-            mapStatus.style.color = "red";
-            
-            // Show detailed error info in map container
-            const mapDiv = document.getElementById('map');
-            mapDiv.innerHTML = `
-                <div style="padding: 20px; text-align: center; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 5px; color: #721c24; height: 400px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
-                    <h3 style="color: #721c24; margin-bottom: 10px;">Map Loading Error</h3>
-                    <p><strong>Error:</strong> ${error.message}</p>
-                    <p><strong>Leaflet Available:</strong> ${typeof L !== 'undefined' ? 'Yes' : 'No'}</p>
-                    <p><strong>Container Dimensions:</strong> ${mapDiv.offsetWidth}px × ${mapDiv.offsetHeight}px</p>
-                    <p><strong>Container Display:</strong> ${window.getComputedStyle(mapDiv).display}</p>
-                    <p>Check browser console for more details.</p>
-                </div>
-            `;
-        }
-    }, 1000); // Wait 1 second for page to settle
+      // Map initialization - simplified and robust
+      console.log('🗺️ Starting map initialization...');
+      
+      // Check if Leaflet is available
+      if (typeof L === 'undefined') {
+          console.error('❌ Leaflet library not loaded');
+          mapStatus.textContent = "Error: Leaflet library not loaded";
+          mapStatus.style.color = "red";
+          return;
+      }
+      
+      // Wait for DOM to be fully ready
+      setTimeout(function() {
+          try {
+              console.log('🗺️ Creating Leaflet map...');
+              mapStatus.textContent = "Creating map...";
+              
+              // Get map container
+              const mapContainer = document.getElementById('map');
+              if (!mapContainer) {
+                  throw new Error('Map container not found');
+              }
+              
+              console.log('📏 Map container dimensions:', mapContainer.offsetWidth, 'x', mapContainer.offsetHeight);
+              
+              // Create map with Singapore center
+              const map = L.map('map', {
+                  center: [1.3521, 103.8198],
+                  zoom: 11,
+                  zoomControl: true
+              });
+              
+              console.log('🗺️ Map object created successfully');
+              mapStatus.textContent = "Adding map tiles...";
+              
+              // Add tile layer
+              const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                  attribution: '© OpenStreetMap contributors',
+                  maxZoom: 19
+              });
+              
+              tileLayer.addTo(map);
+              
+              // Add event listeners for tile loading
+              tileLayer.on('loading', function() {
+                  console.log('🔄 Tiles loading...');
+                  mapStatus.textContent = "Loading map tiles...";
+              });
+              
+              tileLayer.on('load', function() {
+                  console.log('✅ Tiles loaded successfully!');
+                  mapStatus.textContent = "Map loaded successfully!";
+                  mapStatus.style.color = "green";
+              });
+              
+              // Add test marker
+              const testMarker = L.marker([1.3521, 103.8198]).addTo(map);
+              testMarker.bindPopup("<b>Singapore</b><br>Map is working!").openPopup();
+              
+              console.log('🗺️ Test marker added');
+              
+              // Force map resize after short delay
+              setTimeout(function() {
+                  map.invalidateSize();
+                  console.log('🔄 Map size invalidated');
+              }, 100);
+              
+              // Load volunteer requests
+              loadVolunteerRequests(map);
+              
+          } catch (error) {
+              console.error('❌ Map initialization error:', error);
+              mapStatus.textContent = "Map Error: " + error.message;
+              mapStatus.style.color = "red";
+              
+              // Show fallback message
+              document.getElementById('map').innerHTML = 
+                  '<div style="display: flex; align-items: center; justify-content: center; height: 400px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px;">' +
+                  '<div style="text-align: center; color: #6c757d;">' +
+                  '<h4>Map Unavailable</h4>' +
+                  '<p>Error: ' + error.message + '</p>' +
+                  '<p>Check browser console for details</p>' +
+                  '</div></div>';
+          }
+      }, 500);
 
-    // Function to load volunteer requests
-    function loadVolunteerRequests(map) {
-        console.log('Loading volunteer requests...');
-        
-        fetch('{{ url_for("volunteer.volunteer_requests_json") }}')
-            .then(response => {
-                console.log('Response received:', response.status);
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('Received volunteer requests:', data);
-                
-                if (!Array.isArray(data)) {
-                    throw new Error('Invalid data format received');
-                }
-                
-                if (data.length === 0) {
-                    mapStatus.textContent = "Map loaded - No help requests currently active.";
-                    mapStatus.style.color = "blue";
-                } else {
-                    mapStatus.textContent = `Map loaded - Showing ${data.length} help request(s).`;
-                    mapStatus.style.color = "green";
-                    
-                    data.forEach(function(request, index) {
-                        if (request.lat && request.lng) {
-                            console.log(`Adding marker ${index + 1}:`, request);
-                            const marker = L.marker([request.lat, request.lng]).addTo(map);
-                            
-                            let popupContent = `<strong>${request.title}</strong><br>${request.description}`;
-                            if (request.requester) {
-                                popupContent += `<br><small><em>Requested by: ${request.requester}</em></small>`;
-                            }
-                            if (request.claimed_by) {
-                                popupContent += `<br><small><em>Claimed by: ${request.claimed_by}</em></small>`;
-                            }
-                            
-                            marker.bindPopup(popupContent);
-                        } else {
-                            console.warn('Request missing coordinates:', request);
-                        }
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error loading volunteer requests:', error);
-                mapStatus.textContent = "Map loaded - Error loading help requests: " + error.message;
-                mapStatus.style.color = "orange";
-            });
-    }
-});
-</script>
+      // Function to load volunteer requests
+      function loadVolunteerRequests(map) {
+          console.log('📥 Loading volunteer requests...');
+          
+          fetch('{{ url_for("volunteer.volunteer_requests_json") }}')
+              .then(response => {
+                  console.log('📡 Response received:', response.status);
+                  if (!response.ok) {
+                      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                  }
+                  return response.json();
+              })
+              .then(data => {
+                  console.log('📋 Received volunteer requests:', data);
+                  
+                  if (!Array.isArray(data)) {
+                      throw new Error('Invalid data format received');
+                  }
+                  
+                  if (data.length === 0) {
+                      mapStatus.textContent = "Map loaded - No help requests currently active.";
+                      mapStatus.style.color = "blue";
+                  } else {
+                      mapStatus.textContent = `Map loaded - Showing ${data.length} help request(s).`;
+                      mapStatus.style.color = "green";
+                      
+                      // Add markers for each request
+                      data.forEach(function(request, index) {
+                          if (request.lat && request.lng) {
+                              console.log(`📍 Adding marker ${index + 1}:`, request.title);
+                              
+                              const marker = L.marker([request.lat, request.lng]).addTo(map);
+                              
+                              let popupContent = `<strong>${request.title}</strong><br>${request.description}`;
+                              if (request.requester) {
+                                  popupContent += `<br><small><em>By: ${request.requester}</em></small>`;
+                              }
+                              
+                              marker.bindPopup(popupContent);
+                          }
+                      });
+                  }
+              })
+              .catch(error => {
+                  console.error('❌ Error loading volunteer requests:', error);
+                  mapStatus.textContent = "Map loaded - Error loading help requests: " + error.message;
+                  mapStatus.style.color = "orange";
+              });
+      }
+  });
+  </script>
 {% endblock %}
