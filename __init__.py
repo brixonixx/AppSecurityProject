@@ -1,5 +1,5 @@
 # Updated main.py - Enhanced with Google OAuth debugging
-from flask import Flask, render_template, redirect, url_for
+from flask import Flask, render_template, redirect, url_for, request, session, jsonify
 from flask_login import LoginManager, login_required, current_user
 from sqlalchemy import text, inspect
 from models import db, User
@@ -10,6 +10,7 @@ from security import add_security_headers
 from config import Config
 import os
 import logging
+from settings import *
 
 # Configure logging with more detailed format
 logging.basicConfig(
