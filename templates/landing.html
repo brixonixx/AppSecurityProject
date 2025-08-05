@@ -5,6 +5,149 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Welcome to SilverSage - Connecting Seniors to Community</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        /* FAQ Section Styles */
+        .faq-section {
+            background: #f8f9fa;
+            padding: 4rem 0;
+        }
+
+        .faq-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background: #fff;
+            color: #1a1a1a;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .faq-title {
+            font-size: 3rem;
+            margin-bottom: 3rem;
+            letter-spacing: 0.2em;
+            color: #1a1a1a;
+        }
+
+        .faq-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            font-weight: bold;
+            margin-bottom: 3rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            flex-wrap: wrap;
+        }
+
+        .faq-tab {
+            cursor: pointer;
+            color: #666;
+            transition: color 0.3s ease;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+        }
+
+        .faq-tab.active {
+            color: #d15d5d;
+            background: rgba(209, 93, 93, 0.1);
+        }
+
+        .faq-content-wrapper {
+            max-width: 800px;
+            margin: auto;
+            text-align: left;
+        }
+
+        .faq-question {
+            font-weight: bold;
+            margin-top: 2rem;
+            cursor: pointer;
+            position: relative;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            color: #1a1a1a;
+            transition: all 0.3s ease;
+            padding: 1rem;
+            border-radius: 5px;
+            background: #f8f9fa;
+        }
+
+        .faq-question:hover {
+            background: #e9ecef;
+        }
+
+        .faq-question::before {
+            content: "+";
+            margin-right: 15px;
+            font-size: 1.2em;
+            transition: transform 0.3s ease;
+        }
+
+        .faq-question.open::before {
+            content: "-";
+            transform: rotate(0deg);
+        }
+
+        .faq-answer {
+            display: none;
+            margin-top: 0.8rem;
+            margin-left: 30px;
+            color: #666;
+            line-height: 1.6;
+            padding-bottom: 1rem;
+        }
+
+        .faq-question.open + .faq-answer {
+            display: block;
+        }
+
+        .faq-content {
+            display: none;
+        }
+
+        .faq-content.active {
+            display: block;
+        }
+
+        .faq-contact-section {
+            margin-top: 4rem;
+            text-align: center;
+        }
+
+        .faq-contact-button {
+            background-color: #d15d5d;
+            color: #fff;
+            padding: 1rem 2rem;
+            text-transform: uppercase;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            letter-spacing: 0.05em;
+            transition: background-color 0.3s ease;
+            border-radius: 5px;
+        }
+
+        .faq-contact-button:hover {
+            background-color: #b44d4d;
+        }
+
+        @media (max-width: 768px) {
+            .faq-tabs {
+                gap: 1.5rem;
+            }
+
+            .faq-title {
+                font-size: 2rem;
+            }
+
+            .faq-content-wrapper {
+                padding: 0 1rem;
+            }
+        }
+    </style>
 </head>
 <body class="landing-page">
     <!-- Landing Page Navbar -->
@@ -16,6 +159,7 @@
                 <a href="#features">Features</a>
                 <a href="#impact">Impact</a>
                 <a href="#contact">Contact</a>
+                <a href="#faq">FAQ</a>
                 <div class="login-buttons">
                     <a href="{{ url_for('auth.login') }}" class="btn-login">Login</a>
                     <a href="{{ url_for('auth.register') }}" class="btn-register">Sign Up</a>
@@ -23,7 +167,7 @@
             </div>
         </div>
     </nav>
-    
+
     <!-- Hero Section -->
     <section class="landing-hero">
         <div class="container">
@@ -38,30 +182,30 @@
             </div>
         </div>
     </section>
-    
+
     <!-- Problem Statement Section -->
     <section class="problem-section">
         <div class="container">
             <div class="problem-statement">
                 <h2 class="problem-title">Addressing a Critical Challenge</h2>
-                
+
                 <div class="problem-flow">
                     <div class="problem-box">
                         <div class="problem-icon">❓</div>
                         <h3 class="problem-heading">Problem</h3>
                         <p>Many seniors face social isolation and find existing platforms hard to use.</p>
                     </div>
-                    
+
                     <div class="flow-arrow">→</div>
-                    
+
                     <div class="solution-box">
                         <div class="solution-icon">✅</div>
                         <h3 class="solution-heading">Solution</h3>
                         <p>SilverSage connects seniors to local educational events and community groups.</p>
                     </div>
-                    
+
                     <div class="flow-arrow">→</div>
-                    
+
                     <div class="result-box">
                         <div class="result-icon">💡</div>
                         <h3 class="result-heading">Result</h3>
@@ -71,7 +215,7 @@
             </div>
         </div>
     </section>
-    
+
     <!-- About Section -->
     <section id="about" class="about-section">
         <div class="container">
@@ -100,44 +244,44 @@
             </div>
         </div>
     </section>
-    
+
     <!-- Features Section -->
     <section id="features" class="features-section">
         <div class="container">
             <h2 class="features-title">Why Choose SilverSage?</h2>
             <p class="features-subtitle">Built with security, simplicity, and accessibility at its core</p>
-            
+
             <div class="features-grid">
                 <div class="feature-card">
                     <div class="feature-icon">🔒</div>
                     <h3>Enhanced Security</h3>
                     <p>Advanced password protection, account lockout features, and comprehensive audit logging keep your data safe and secure.</p>
                 </div>
-                
+
                 <div class="feature-card">
                     <div class="feature-icon">👁️</div>
                     <h3>Senior-Friendly Design</h3>
                     <p>Large fonts, clear navigation, and intuitive design make it simple for users of all technical levels to navigate with confidence.</p>
                 </div>
-                
+
                 <div class="feature-card">
                     <div class="feature-icon">🏘️</div>
                     <h3>Community Connection</h3>
                     <p>Connect with local educational events, workshops, and community groups tailored to your interests and location.</p>
                 </div>
-                
+
                 <div class="feature-card">
                     <div class="feature-icon">📱</div>
                     <h3>Responsive Design</h3>
                     <p>Works perfectly on all devices - desktop, tablet, or mobile phone - so you can stay connected anywhere.</p>
                 </div>
-                
+
                 <div class="feature-card">
                     <div class="feature-icon">🛡️</div>
                     <h3>Privacy First</h3>
                     <p>Your personal information is encrypted and protected with industry-standard security measures.</p>
                 </div>
-                
+
                 <div class="feature-card">
                     <div class="feature-icon">💬</div>
                     <h3>24/7 Support</h3>
@@ -146,26 +290,26 @@
             </div>
         </div>
     </section>
-    
+
     <!-- Impact Section -->
     <section id="impact" class="impact-section">
         <div class="container">
             <h2 class="impact-title">Our Impact</h2>
             <p class="impact-subtitle">SilverSage is more than just a platform - it's a bridge to a more connected, engaged life</p>
-            
+
             <div class="impact-grid">
                 <div class="impact-item">
                     <div class="impact-icon">❤️</div>
                     <h3>Forge Tighter Bonds</h3>
                     <p>Strengthen communities by connecting like-minded seniors and fostering meaningful relationships through shared interests and activities.</p>
                 </div>
-                
+
                 <div class="impact-item">
                     <div class="impact-icon">📚</div>
                     <h3>Promote Lifelong Learning</h3>
                     <p>Keep minds active and engaged through access to educational workshops, lectures, and skill-building opportunities.</p>
                 </div>
-                
+
                 <div class="impact-item">
                     <div class="impact-icon">🧠</div>
                     <h3>Improve Mental Health</h3>
@@ -174,13 +318,13 @@
             </div>
         </div>
     </section>
-    
+
     <!-- Statistics Highlight -->
     <section class="stats-highlight">
         <div class="container">
             <h2 class="stats-title">Making a Real Difference</h2>
             <p class="stats-subtitle">Join thousands of seniors who have already found their community</p>
-            
+
             <div class="stats-grid">
                 <div class="stat-item">
                     <div class="stat-number">1000+</div>
@@ -201,13 +345,13 @@
             </div>
         </div>
     </section>
-    
+
     <!-- Contact Section -->
     <section id="contact" class="contact-section">
         <div class="container contact-container">
             <h2 class="contact-title">Get in Touch</h2>
             <p class="contact-subtitle">Have questions? We're here to help you get connected!</p>
-            
+
             <div class="contact-info">
                 <div class="contact-item">
                     <h3>📧 Email</h3>
@@ -222,14 +366,150 @@
                     <p>Mon-Fri 9AM-6PM EST</p>
                 </div>
             </div>
-            
+
             <div class="contact-cta">
                 <a href="{{ url_for('auth.register') }}" class="btn btn-success contact-btn-primary">Start Your Journey</a>
                 <a href="{{ url_for('auth.login') }}" class="btn btn-primary contact-btn-secondary">Already a Member?</a>
             </div>
         </div>
     </section>
-    
+
+    <!-- FAQ Section -->
+    <section id="faq" class="faq-section">
+        <div class="faq-container">
+            <h1 class="faq-title">FAQ</h1>
+
+            <div class="faq-tabs">
+                <div class="faq-tab active" data-tab="login">Login</div>
+                <div class="faq-tab" data-tab="forum">Forum</div>
+                <div class="faq-tab" data-tab="volunteer">Volunteer</div>
+                <div class="faq-tab" data-tab="events">Events</div>
+                <div class="faq-tab" data-tab="settings">Settings</div>
+            </div>
+
+            <div class="faq-content-wrapper">
+                <!-- Login Tab -->
+                <div id="login" class="faq-content active">
+                    <div class="faq-question">How do I create an account?</div>
+                    <div class="faq-answer">
+                        Go to the registration page, fill in your details, and submit. You'll receive a confirmation email—click the link to activate your account.
+                    </div>
+
+                    <div class="faq-question">Can I use Google to login?</div>
+                    <div class="faq-answer">
+                        Yes! Just click "Sign in with Google" on the login page and follow the prompts.
+                    </div>
+
+                    <div class="faq-question">I forgot my password—how can I reset it?</div>
+                    <div class="faq-answer">
+                        Click "Forgot Password?" on the login page, enter your email, and follow the instructions in the reset email.
+                    </div>
+
+                    <div class="faq-question">I want to change my password. How?</div>
+                    <div class="faq-answer">
+                        Log in, go to your profile settings, and select "Change Password." Enter your current and new password, then save the changes.
+                    </div>
+
+                    <div class="faq-question">How do I update my profile information or change my email preferences?</div>
+                    <div class="faq-answer">
+                        Go to your profile settings to update your info. For email preferences, go to the notification settings and adjust as needed.
+                    </div>
+                </div>
+
+                <!-- Forum Tab -->
+                <div id="forum" class="faq-content">
+                    <div class="faq-question">How do I create a new post?</div>
+                    <div class="faq-answer">
+                        Navigate to the forum section and click "New Post." Fill in your title and content, then click "Publish" to share with the community.
+                    </div>
+
+                    <div class="faq-question">Can I edit or delete my posts?</div>
+                    <div class="faq-answer">
+                        Yes, you can edit or delete your own posts by clicking the three dots menu next to your post and selecting the appropriate option.
+                    </div>
+
+                    <div class="faq-question">How do I report inappropriate content?</div>
+                    <div class="faq-answer">
+                        Click the "Report" button on any post or comment that violates our community guidelines. Our moderators will review it promptly.
+                    </div>
+                </div>
+
+                <!-- Volunteer Tab -->
+                <div id="volunteer" class="faq-content">
+                    <div class="faq-question">How can I become a volunteer?</div>
+                    <div class="faq-answer">
+                        To become a volunteer, visit the "Volunteer" page on our website. You will find an application form where you can provide your contact information, interests, and availability. After submitting the form, we'll get in touch with you regarding the next steps.
+                    </div>
+
+                    <div class="faq-question">How do I offer help as a volunteer?</div>
+                    <div class="faq-answer">
+                        Click on the pin on the map and a pop-up will show up. If you would like to offer help, click the "Go To" button in the pop-up.
+                    </div>
+
+                    <div class="faq-question">What types of volunteer opportunities are available?</div>
+                    <div class="faq-answer">
+                        We offer various volunteer opportunities including event assistance, community outreach, administrative support, and specialized skill-based volunteering. Check our volunteer page for current openings.
+                    </div>
+                </div>
+
+                <!-- Events Tab -->
+                <div id="events" class="faq-content">
+                    <div class="faq-question">How do I sign up for an event?</div>
+                    <div class="faq-answer">
+                        Click the "Sign Up Now!" button on the event card. You must be logged in to register.
+                    </div>
+
+                    <div class="faq-question">Is there a limit to how many events I can join?</div>
+                    <div class="faq-answer">
+                        You may join as many events as you wish, subject to availability. Some events may have limited slots.
+                    </div>
+
+                    <div class="faq-question">Do I need an account to join an event?</div>
+                    <div class="faq-answer">
+                        Yes. You need to be a registered user and logged in to sign up or view your registered events.
+                    </div>
+
+                    <div class="faq-question">Can I register someone else for an event?</div>
+                    <div class="faq-answer">
+                        No. Each participant must register using their own account to ensure accurate attendance and communication.
+                    </div>
+
+                    <div class="faq-question">Can I cancel my event registration?</div>
+                    <div class="faq-answer">
+                        Yes, you can cancel your registration from your account dashboard. Please note that some events may have cancellation deadlines.
+                    </div>
+                </div>
+
+                <!-- Settings Tab -->
+                <div id="settings" class="faq-content">
+                    <div class="faq-question">How do I change my notification preferences?</div>
+                    <div class="faq-answer">
+                        Go to Settings > Notifications in your account dashboard. You can customize which types of notifications you receive via email or push notifications.
+                    </div>
+
+                    <div class="faq-question">Can I delete my account?</div>
+                    <div class="faq-answer">
+                        Yes, you can delete your account from Settings > Account Management. Please note that this action is permanent and cannot be undone.
+                    </div>
+
+                    <div class="faq-question">How do I change my privacy settings?</div>
+                    <div class="faq-answer">
+                        Navigate to Settings > Privacy to control who can see your profile, posts, and activity. You can also manage data sharing preferences here.
+                    </div>
+
+                    <div class="faq-question">Can I export my data?</div>
+                    <div class="faq-answer">
+                        Yes, you can request a data export from Settings > Data Management. We'll prepare your data and send you a download link within 48 hours.
+                    </div>
+                </div>
+            </div>
+
+            <div class="faq-contact-section">
+                <button class="faq-contact-button">Contact Support</button>
+            </div>
+        </div>
+    </section>
+
     <!-- Footer -->
     <footer class="landing-footer">
         <div class="container">
@@ -239,7 +519,66 @@
             <p class="footer-description">Bridging generations through technology and community</p>
         </div>
     </footer>
-    
+
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // FAQ Tab switching functionality
+        const faqTabs = document.querySelectorAll('.faq-tab');
+        const faqContents = document.querySelectorAll('.faq-content');
+
+        faqTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Remove active class from all tabs
+                faqTabs.forEach(t => t.classList.remove('active'));
+                // Add active class to clicked tab
+                tab.classList.add('active');
+
+                // Get the tab content ID
+                const tabContent = tab.getAttribute('data-tab');
+
+                // Hide all content sections
+                faqContents.forEach(content => {
+                    content.classList.remove('active');
+                });
+
+                // Show selected content section
+                document.getElementById(tabContent).classList.add('active');
+
+                // Close all open questions when switching tabs
+                const questions = document.querySelectorAll('.faq-question');
+                questions.forEach(q => {
+                    q.classList.remove('open');
+                });
+            });
+        });
+
+        // FAQ accordion functionality
+        const faqQuestions = document.querySelectorAll('.faq-question');
+        faqQuestions.forEach(q => {
+            q.addEventListener('click', () => {
+                q.classList.toggle('open');
+            });
+        });
+
+        // FAQ Contact button functionality
+        document.querySelector('.faq-contact-button').addEventListener('click', () => {
+            // Scroll to the main contact section
+            document.getElementById('contact').scrollIntoView({ behavior: 'smooth' });
+        });
+
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
 </body>
 </html>
