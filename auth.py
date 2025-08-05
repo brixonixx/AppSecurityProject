@@ -21,19 +21,30 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in current_app.config['ALLOWED_EXTENSIONS']
 
 def save_profile_picture(form_picture):
-    """Save and resize profile picture"""
-    random_hex = secrets.token_hex(8)
-    _, f_ext = os.path.splitext(form_picture.filename)
-    picture_fn = random_hex + f_ext
-    picture_path = os.path.join(current_app.root_path, current_app.config['UPLOAD_FOLDER'], picture_fn)
-    
-    # Resize image to save space and standardize
+    """Save, sanitize, resize, and log profile picture securely"""
+    # 1. Secure filename
+    secure_name = secure_filename_custom(form_picture.filename)
+    if not secure_name:
+        return None  # Invalid file extension or unsafe filename
+
+    picture_path = os.path.join(current_app.root_path, current_app.config['UPLOAD_FOLDER'], secure_name)
+
+    # 2. Resize image to save space and standardize
     output_size = (200, 200)
     img = Image.open(form_picture)
     img.thumbnail(output_size)
     img.save(picture_path)
-    
-    return picture_fn
+
+    # 3. Hash file for integrity verification
+    file_hash = hash_file(picture_path)
+
+    # 4. Log security event
+    log_security_event(
+        "Profile picture uploaded",
+        details={"file": secure_name, "hash": file_hash}
+    )
+
+    return secure_name
 
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
@@ -254,31 +265,38 @@ def profile():
     
     if form.validate_on_submit():
         if form.profile_picture.data:
-            # Save the uploaded profile picture securely
-            picture_file = save_profile_picture(form.profile_picture.data)
-            current_user.profile_picture = picture_file
+            # Extract the original filename
+            original_filename = form.profile_picture.data.filename
+            
+            # Generate a secure filename
+            secure_name = secure_filename_custom(original_filename)
+            if not secure_name:
+                flash('Invalid file type. Only images are allowed.', 'error')
+                return redirect(url_for('auth.profile'))
 
-            # ✅ Generate SHA-256 hash for integrity logging
-            file_path = os.path.join(current_app.root_path, current_app.config['UPLOAD_FOLDER'], picture_file)
+            # Save the file with the secure name
+            file_path = os.path.join(current_app.root_path, current_app.config['UPLOAD_FOLDER'], secure_name)
+            form.profile_picture.data.save(file_path)
+            current_user.profile_picture = secure_name
+
+            # Hash the saved file for integrity logging
             file_hash = hash_file(file_path)
-
-            # Log the file upload with hash for auditing
             log_security_event(
                 f'Profile picture uploaded for {current_user.username}',
-                details={'file': picture_file, 'hash': file_hash}
+                details={'file': secure_name, 'hash': file_hash}
             )
-        
-        # Sanitize input fields to prevent XSS
+
+        # Sanitize and update user details
         current_user.first_name = sanitize_input(form.first_name.data)
         current_user.last_name = sanitize_input(form.last_name.data)
         current_user.age = form.age.data
         current_user.contact_number = sanitize_input(form.contact_number.data)
-        
+
         db.session.commit()
         log_security_event(f'Profile updated: {current_user.username}')
         flash('Your profile has been updated!', 'success')
         return redirect(url_for('auth.profile'))
-    
+
     elif request.method == 'GET':
         form.first_name.data = current_user.first_name
         form.last_name.data = current_user.last_name
