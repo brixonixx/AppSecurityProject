@@ -133,13 +133,12 @@ def sanitize_input(input_string, allow_html=False):
             '"': '&quot;',
             "'": '&#x27;',
             '/': '&#x2F;',
-            '=': '&#x3D;',
+            '=': '&#x3D;'
         }
         for char, escape in replacements.items():
             input_string = input_string.replace(char, escape)
     
     return input_string.strip()
-
 def alt_sanitize_input(input_string, allow_html=False) -> str:
     """
     Sanitize user input to prevent common web attacks

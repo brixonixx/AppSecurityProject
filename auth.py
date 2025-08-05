@@ -251,37 +251,40 @@ def logout():
 def profile():
     """User profile management"""
     form = ProfileForm()
-
+    
     if form.validate_on_submit():
-        # ✅ Handle profile picture with secure filename
         if form.profile_picture.data:
-            file = form.profile_picture.data
-            safe_filename = secure_filename_custom(file.filename)
-            if not safe_filename:
-                flash("Invalid file type. Only JPG, JPEG, PNG, GIF allowed.", "danger")
-                return redirect(url_for('auth.profile'))
-            
-            upload_path = os.path.join(current_app.root_path, current_app.config['UPLOAD_FOLDER'], safe_filename)
-            file.save(upload_path)
-            current_user.profile_picture = safe_filename
+            # Save the uploaded profile picture securely
+            picture_file = save_profile_picture(form.profile_picture.data)
+            current_user.profile_picture = picture_file
 
-        # ✅ Sanitize all user inputs
+            # ✅ Generate SHA-256 hash for integrity logging
+            file_path = os.path.join(current_app.root_path, current_app.config['UPLOAD_FOLDER'], picture_file)
+            file_hash = hash_file(file_path)
+
+            # Log the file upload with hash for auditing
+            log_security_event(
+                f'Profile picture uploaded for {current_user.username}',
+                details={'file': picture_file, 'hash': file_hash}
+            )
+        
+        # Sanitize input fields to prevent XSS
         current_user.first_name = sanitize_input(form.first_name.data)
         current_user.last_name = sanitize_input(form.last_name.data)
-        current_user.age = sanitize_input(str(form.age.data))
+        current_user.age = form.age.data
         current_user.contact_number = sanitize_input(form.contact_number.data)
-
+        
         db.session.commit()
         log_security_event(f'Profile updated: {current_user.username}')
         flash('Your profile has been updated!', 'success')
         return redirect(url_for('auth.profile'))
-
+    
     elif request.method == 'GET':
         form.first_name.data = current_user.first_name
         form.last_name.data = current_user.last_name
         form.age.data = current_user.age
         form.contact_number.data = current_user.contact_number
-
+    
     return render_template('profile.html', form=form)
 
 
