@@ -122,11 +122,6 @@ def register_volunteer():
         flash("Login required to register as a volunteer", "warning")
         return redirect(url_for('auth.login'))
 
-    # Force testuser to be volunteer automatically
-    if current_user.username == 'testuser':
-        flash("Testuser is automatically a volunteer!", "info")
-        return redirect(url_for('volunteer.volunteer_map'))
-
     user = User.query.filter_by(username=current_user.username).first()
     if not user:
         flash("User not found. Please log in again.", "danger")
