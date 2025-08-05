@@ -1782,4 +1782,475 @@ h1.text-center.mb-4::after {
     height: 25px;
     background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
     border-radius: 2px;
-}}
+}
+
+/* Account Lockout Specific Styles - Add to your style.css */
+
+/* Enhanced Alert Styling for Account Lockouts */
+.lockout-alert {
+    background: linear-gradient(135deg, #fff5f5, #fed7d7);
+    border: 2px solid #fc8181;
+    border-radius: 12px;
+    padding: 0;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 12px rgba(252, 129, 129, 0.2);
+    animation: lockoutAlert 0.5s ease-out;
+}
+
+@keyframes lockoutAlert {
+    0% {
+        opacity: 0;
+        transform: scale(0.95) translateY(-10px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.lockout-message {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+    padding: 20px;
+}
+
+.lockout-icon {
+    font-size: 32px;
+    flex-shrink: 0;
+    margin-top: 5px;
+    animation: lockShake 2s infinite;
+}
+
+@keyframes lockShake {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-3deg); }
+    75% { transform: rotate(3deg); }
+}
+
+.lockout-content h4 {
+    color: #c53030;
+    margin: 0 0 10px 0;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.lockout-reason {
+    color: #742a2a;
+    font-size: 16px;
+    margin: 0 0 20px 0;
+    line-height: 1.5;
+}
+
+.lockout-help {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid #fc8181;
+    margin-top: 15px;
+}
+
+.lockout-help h5 {
+    color: #c53030;
+    font-size: 16px;
+    margin: 0 0 8px 0;
+    font-weight: 600;
+}
+
+.lockout-help ul {
+    margin: 0 0 15px 0;
+    padding-left: 20px;
+}
+
+.lockout-help li {
+    color: #744210;
+    font-size: 14px;
+    margin-bottom: 5px;
+    line-height: 1.4;
+}
+
+.lockout-help ul:last-child {
+    margin-bottom: 0;
+}
+
+/* Countdown Timer Styles */
+.lockout-countdown {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 15px;
+    border: 2px solid #fed7d7;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.countdown-header h5 {
+    color: #c53030;
+    margin: 0 0 15px 0;
+    font-size: 18px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.countdown-display {
+    background: linear-gradient(135deg, #fc8181, #f56565);
+    color: white;
+    padding: 15px 25px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    font-family: 'Courier New', monospace;
+    box-shadow: 0 2px 8px rgba(252, 129, 129, 0.3);
+}
+
+.countdown-display span {
+    font-size: 24px;
+    font-weight: bold;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    animation: countdownPulse 2s infinite;
+}
+
+@keyframes countdownPulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+.countdown-progress {
+    width: 100%;
+    height: 8px;
+    background-color: #fed7d7;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 10px;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #fc8181, #f56565);
+    width: 0%;
+    transition: width 1s ease;
+    border-radius: 4px;
+    position: relative;
+}
+
+.progress-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    animation: progressGlow 2s infinite;
+}
+
+@keyframes progressGlow {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.countdown-info small {
+    color: #744210;
+    font-style: italic;
+    font-size: 13px;
+}
+
+/* Lockout Expired Styles */
+.lockout-expired {
+    background: linear-gradient(135deg, #f0fff4, #c6f6d5);
+    padding: 20px;
+    border-radius: 8px;
+    border: 2px solid #68d391;
+    animation: unlockSuccess 0.8s ease-out;
+}
+
+@keyframes unlockSuccess {
+    0% {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.expired-icon {
+    font-size: 32px;
+    margin-bottom: 10px;
+    animation: checkmarkSpin 0.6s ease-out;
+}
+
+@keyframes checkmarkSpin {
+    0% { transform: rotate(-90deg) scale(0); }
+    100% { transform: rotate(0deg) scale(1); }
+}
+
+.lockout-expired h5 {
+    color: #22543d;
+    margin: 0 0 10px 0;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.lockout-expired p {
+    color: #276749;
+    margin: 0 0 15px 0;
+    font-size: 15px;
+}
+
+/* Warning for remaining attempts */
+.attempts-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 15px;
+    background: linear-gradient(135deg, #fffbf0, #fef5e7);
+    border: 2px solid #f6ad55;
+    border-radius: 8px;
+    animation: warningPulse 0.5s ease-out;
+}
+
+@keyframes warningPulse {
+    0% {
+        background: linear-gradient(135deg, #fff, #fff);
+        border-color: #ddd;
+    }
+    100% {
+        background: linear-gradient(135deg, #fffbf0, #fef5e7);
+        border-color: #f6ad55;
+    }
+}
+
+.warning-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    animation: warningBlink 2s infinite;
+}
+
+@keyframes warningBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.warning-content h4 {
+    color: #d69e2e;
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.warning-content p {
+    color: #744210;
+    margin: 0 0 10px 0;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+.security-tip {
+    background: rgba(237, 137, 54, 0.1);
+    padding: 8px 12px;
+    border-radius: 6px;
+    border-left: 3px solid #ed8936;
+    margin-top: 10px;
+}
+
+.security-tip small {
+    color: #744210;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+/* Submission Warning */
+.lockout-submission-warning {
+    animation: slideInShake 0.5s ease-out;
+    background: linear-gradient(135deg, #fff8e1, #ffecb3);
+    border: 2px solid #ffb74d;
+    color: #e65100;
+    font-weight: 600;
+}
+
+@keyframes slideInShake {
+    0% {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    50% {
+        opacity: 1;
+        transform: translateY(0) translateX(-3px);
+    }
+    75% {
+        transform: translateY(0) translateX(3px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) translateX(0);
+    }
+}
+
+/* Form shake animation */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+/* Button enhancements */
+.btn-small {
+    padding: 8px 16px;
+    font-size: 14px;
+    min-width: auto;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-small:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+/* Enhanced form styling for locked state */
+.form-container.locked {
+    opacity: 0.8;
+    pointer-events: none;
+}
+
+.form-container.locked::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(252, 129, 129, 0.1);
+    pointer-events: none;
+    border-radius: 12px;
+}
+
+/* Responsive design for lockout features */
+@media (max-width: 768px) {
+    .lockout-message, .attempts-warning {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+    
+    .lockout-content, .warning-content {
+        width: 100%;
+    }
+    
+    .lockout-help {
+        text-align: left;
+    }
+    
+    .countdown-display span {
+        font-size: 20px;
+    }
+    
+    .lockout-countdown {
+        padding: 15px;
+    }
+    
+    .lockout-icon, .warning-icon {
+        font-size: 28px;
+    }
+    
+    .lockout-content h4, .warning-content h4 {
+        font-size: 18px;
+    }
+}
+
+@media (max-width: 480px) {
+    .lockout-message {
+        padding: 15px;
+    }
+    
+    .lockout-countdown {
+        padding: 12px;
+    }
+    
+    .countdown-display {
+        padding: 12px 20px;
+    }
+    
+    .countdown-display span {
+        font-size: 18px;
+    }
+    
+    .lockout-help {
+        padding: 12px;
+    }
+    
+    .lockout-help h5 {
+        font-size: 14px;
+    }
+    
+    .lockout-help li {
+        font-size: 13px;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .lockout-alert {
+        border-width: 3px;
+        background: #fff;
+    }
+    
+    .countdown-display {
+        background: #c53030;
+        border: 2px solid #000;
+    }
+    
+    .progress-bar {
+        background: #c53030;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .lockout-alert,
+    .lockout-expired,
+    .attempts-warning,
+    .lockout-submission-warning {
+        animation: none;
+    }
+    
+    .lockout-icon,
+    .warning-icon,
+    .expired-icon {
+        animation: none;
+    }
+    
+    .countdown-display span {
+        animation: none;
+    }
+    
+    .progress-bar::after {
+        animation: none;
+    }
+}
+
+/* Print styles */
+@media print {
+    .lockout-countdown,
+    .countdown-display,
+    .countdown-progress {
+        display: none;
+    }
+    
+    .lockout-alert {
+        background: #fff !important;
+        border: 2px solid #000 !important;
+        box-shadow: none !important;
+    }
+}

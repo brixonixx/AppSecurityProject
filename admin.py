@@ -1,4 +1,4 @@
-# admin.py - Admin routes and functionality
+# admin.py - Admin routes and functionality (FIXED - No Duplicates)
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from forms import EventForm
@@ -46,14 +46,49 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# Utility function for lockout statistics
+def get_lockout_statistics():
+    """Get comprehensive lockout statistics for admin dashboard"""
+    # Current locked accounts
+    currently_locked = User.query.filter(
+        User.account_locked_until > datetime.utcnow()
+    ).count()
+    
+    # Accounts with failed attempts (at risk)
+    at_risk_accounts = User.query.filter(
+        User.failed_login_attempts.between(1, 4)
+    ).count()
+    
+    # Accounts locked in the last 24 hours
+    from datetime import timedelta
+    yesterday = datetime.utcnow() - timedelta(days=1)
+    recently_locked = User.query.filter(
+        User.account_locked_until > yesterday
+    ).count()
+    
+    # Failed login attempts in the last hour
+    last_hour = datetime.utcnow() - timedelta(hours=1)
+    recent_failed_attempts = User.query.filter(
+        User.last_failed_login > last_hour
+    ).count()
+    
+    return {
+        'currently_locked': currently_locked,
+        'at_risk_accounts': at_risk_accounts,
+        'recently_locked': recently_locked,
+        'recent_failed_attempts': recent_failed_attempts
+    }
+
 @admin.route('/admin/dashboard')
 @admin_required
 def admin_dashboard():
-    """Main admin dashboard with user statistics"""
+    """Main admin dashboard with enhanced security statistics"""
     total_users = User.query.count()
     active_users = User.query.filter_by(is_active=True).count()
     admin_users = User.query.filter_by(is_admin=True).count()
-    locked_users = User.query.filter(User.failed_login_attempts >= 5).count()
+    
+    # Enhanced lockout statistics
+    lockout_stats = get_lockout_statistics()
     
     # Volunteer statistics - check if volunteer columns exist
     try:
@@ -69,17 +104,45 @@ def admin_dashboard():
     # Get recent audit logs
     recent_logs = AuditLog.query.order_by(AuditLog.timestamp.desc()).limit(10).all()
     
+    # Security alerts
+    security_alerts = []
+    
+    if lockout_stats['currently_locked'] > 0:
+        security_alerts.append({
+            'type': 'danger',
+            'message': f"🔒 {lockout_stats['currently_locked']} accounts are currently locked",
+            'action_url': url_for('admin.locked_users'),
+            'action_text': 'View Locked Accounts'
+        })
+    
+    if lockout_stats['at_risk_accounts'] > 5:
+        security_alerts.append({
+            'type': 'warning', 
+            'message': f"⚠️ {lockout_stats['at_risk_accounts']} accounts have failed login attempts",
+            'action_url': url_for('admin.user_list', filter='at_risk'),
+            'action_text': 'View At-Risk Accounts'
+        })
+    
+    if lockout_stats['recent_failed_attempts'] > 10:
+        security_alerts.append({
+            'type': 'info',
+            'message': f"📊 {lockout_stats['recent_failed_attempts']} failed login attempts in the last hour",
+            'action_url': url_for('admin.audit_logs'),
+            'action_text': 'View Audit Logs'
+        })
+    
     log_security_event('Admin dashboard accessed')
     
     return render_template('admin/admin_dashboard.html',
                          total_users=total_users,
                          active_users=active_users,
                          admin_users=admin_users,
-                         locked_users=locked_users,
+                         lockout_stats=lockout_stats,
                          total_volunteers=total_volunteers,
                          pending_volunteers=pending_volunteers,
                          approved_volunteers=approved_volunteers,
-                         recent_logs=recent_logs)
+                         recent_logs=recent_logs,
+                         security_alerts=security_alerts)
 
 @admin.route('/admin/users')
 @admin_required
@@ -114,6 +177,8 @@ def user_list():
         query = query.filter_by(is_admin=True)
     elif filter_by == 'locked':
         query = query.filter(User.failed_login_attempts >= 5)
+    elif filter_by == 'at_risk':
+        query = query.filter(User.failed_login_attempts.between(1, 4))
     elif filter_by in ['volunteer', 'volunteer_pending', 'volunteer_approved']:
         try:
             if filter_by == 'volunteer':
@@ -303,19 +368,49 @@ def reset_user_password(user_id):
     flash(f'Password reset for {user.username}. Temporary password: {temp_password}', 'info')
     return redirect(url_for('admin.edit_user', user_id=user_id))
 
+# SINGLE UNLOCK USER ROUTE - Enhanced with detailed feedback
 @admin.route('/admin/user/<int:user_id>/unlock', methods=['POST'])
 @admin_required
 def unlock_user(user_id):
-    """Unlock a locked user account"""
+    """Enhanced unlock user account with detailed feedback"""
     user = User.query.get_or_404(user_id)
     
+    # Capture current lockout state for logging
+    was_locked = user.is_account_locked()
+    failed_attempts = user.failed_login_attempts
+    lockout_time = user.account_locked_until
+    
+    if was_locked:
+        time_remaining = user.get_lockout_time_remaining()
+        if time_remaining:
+            minutes_left = int(time_remaining.total_seconds() / 60)
+            time_info = f" ({minutes_left} minutes remaining)"
+        else:
+            time_info = ""
+    else:
+        time_info = ""
+    
+    # Unlock the account
     user.failed_login_attempts = 0
     user.account_locked_until = None
+    user.last_failed_login = None
     
     db.session.commit()
     
-    log_security_event(f'Admin unlocked user: {user.username}')
-    flash(f'User {user.username} unlocked successfully!', 'success')
+    # Log the admin action with detailed information
+    log_security_event(
+        f'Admin unlocked user account: {user.username}', 
+        success=True,
+        details=f'Failed attempts reset from {failed_attempts} to 0. Lockout cleared{time_info}.'
+    )
+    
+    if was_locked:
+        flash(f'✅ Account unlocked successfully! User {user.username} had {failed_attempts} failed attempts and was locked{time_info}. They can now log in immediately.', 'success')
+    elif failed_attempts > 0:
+        flash(f'✅ Failed login attempts reset! User {user.username} had {failed_attempts} failed attempts. Counter has been reset to 0.', 'success')
+    else:
+        flash(f'ℹ️ User {user.username} was not locked and had no failed attempts. No action needed.', 'info')
+    
     return redirect(url_for('admin.user_list'))
 
 @admin.route('/admin/user/<int:user_id>/toggle-active', methods=['POST'])
@@ -337,6 +432,104 @@ def toggle_user_active(user_id):
     flash(f'User {user.username} {status} successfully!', 'success')
     
     return redirect(url_for('admin.user_list'))
+
+# NEW LOCKOUT MANAGEMENT ROUTES
+@admin.route('/admin/users/locked')
+@admin_required  
+def locked_users():
+    """View all currently locked user accounts"""
+    page = request.args.get('page', 1, type=int)
+    
+    # Get locked users (either by failed attempts or explicit lockout time)
+    locked_users_query = User.query.filter(
+        db.or_(
+            User.failed_login_attempts >= 5,
+            User.account_locked_until > datetime.utcnow()
+        )
+    )
+    
+    locked_users = locked_users_query.paginate(
+        page=page, per_page=20, error_out=False
+    )
+    
+    # Calculate lockout info for each user
+    lockout_info = {}
+    for user in locked_users.items:
+        info = {
+            'is_locked': user.is_account_locked(),
+            'failed_attempts': user.failed_login_attempts,
+            'time_remaining': None,
+            'lockout_reason': 'Not locked'
+        }
+        
+        if user.is_account_locked():
+            time_remaining = user.get_lockout_time_remaining()
+            if time_remaining:
+                info['time_remaining'] = time_remaining
+                minutes = int(time_remaining.total_seconds() / 60)
+                seconds = int(time_remaining.total_seconds() % 60)
+                info['lockout_reason'] = f'Locked for {minutes}m {seconds}s'
+            else:
+                info['lockout_reason'] = 'Lock expired (needs page refresh)'
+        elif user.failed_login_attempts >= 5:
+            info['lockout_reason'] = f'{user.failed_login_attempts} failed attempts'
+        
+        lockout_info[user.id] = info
+    
+    total_locked = locked_users_query.count()
+    
+    log_security_event('Admin viewed locked users list')
+    
+    return render_template('admin/locked_users.html', 
+                         users=locked_users,
+                         lockout_info=lockout_info,
+                         total_locked=total_locked)
+
+@admin.route('/admin/users/unlock-all', methods=['POST'])
+@admin_required
+def unlock_all_users():
+    """Unlock all currently locked user accounts (emergency function)"""
+    
+    # Get confirmation
+    confirmation = request.form.get('confirmation', '').lower()
+    if confirmation != 'unlock all accounts':
+        flash('❌ Confirmation text does not match. No accounts were unlocked.', 'error')
+        return redirect(url_for('admin.locked_users'))
+    
+    # Find all locked users
+    locked_users = User.query.filter(
+        db.or_(
+            User.failed_login_attempts >= 5,
+            User.account_locked_until > datetime.utcnow()
+        )
+    ).all()
+    
+    if not locked_users:
+        flash('ℹ️ No locked accounts found.', 'info')
+        return redirect(url_for('admin.locked_users'))
+    
+    # Unlock all accounts
+    unlock_count = 0
+    for user in locked_users:
+        if user.failed_login_attempts > 0 or user.is_account_locked():
+            user.failed_login_attempts = 0
+            user.account_locked_until = None
+            user.last_failed_login = None
+            unlock_count += 1
+    
+    db.session.commit()
+    
+    # Log the mass unlock action
+    unlocked_usernames = [user.username for user in locked_users]
+    log_security_event(
+        f'Admin performed mass account unlock', 
+        success=True,
+        details=f'Unlocked {unlock_count} accounts: {", ".join(unlocked_usernames)}'
+    )
+    
+    flash(f'✅ Successfully unlocked {unlock_count} user accounts. All users can now log in immediately.', 'success')
+    
+    return redirect(url_for('admin.locked_users'))
 
 @admin.route('/admin/audit-logs')
 @admin_required
@@ -414,7 +607,6 @@ def export_users():
     log_security_event('Admin exported user list')
     
     return response
-
 
 @admin.route('/admin/forum')
 @admin_required
@@ -546,7 +738,6 @@ def view_volunteer(volunteer_id):
         flash('Volunteer features are not available yet. Please run the database migration first.', 'warning')
         return redirect(url_for('admin.admin_dashboard'))
 
-
 @admin.route("/admin/events", methods=["GET", "POST"])
 @admin_required
 def event_management():
@@ -558,7 +749,7 @@ def event_management():
     if not user_id:
         logging.warning("Something is wrong, no user ID found for this user.")
         flash("Unexpected error occured", "danger")    
-        return redirect(url_for("admin_dashboard"))
+        return redirect(url_for("admin.admin_dashboard"))
     
     try:
         if request.method == "POST" and form.validate_on_submit():
@@ -616,8 +807,6 @@ def delete_event(event_id):
         logging.exception(f"An exception occured when deleting an event: {e}")
         flash(f"An error occured when deleting event {id}", "danger")
     return redirect(url_for("admin.event_management"))
-
-# Add this route to your admin.py file
 
 @admin.route('/admin/posts')
 @admin_required

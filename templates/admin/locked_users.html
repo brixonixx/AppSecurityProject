@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+
+{% block title %}Locked Users - Admin{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <h1>🔒 Locked User Accounts</h1>
+    
+    <div class="stats-summary">
+        <div class="stat-card danger">
+            <div class="stat-icon">🔒</div>
+            <div class="stat-content">
+                <h2>{{ total_locked }}</h2>
+                <p>Locked Accounts</p>
+            </div>
+        </div>
+    </div>
+    
+    {% if total_locked > 0 %}
+        <div class="alert alert-warning">
+            <strong>⚠️ Emergency Unlock:</strong> You can unlock all accounts at once if needed.
+            <form method="POST" action="{{ url_for('admin.unlock_all_users') }}" style="display: inline-block; margin-left: 15px;">
+                <input type="text" name="confirmation" placeholder='Type "unlock all accounts"' 
+                       style="padding: 5px; margin-right: 10px;" required>
+                <button type="submit" class="btn btn-warning btn-small" 
+                        onclick="return confirm('Are you sure you want to unlock ALL locked accounts?')">
+                    Unlock All Accounts
+                </button>
+            </form>
+        </div>
+    {% endif %}
+    
+    {% if users.items %}
+        <div class="data-table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Failed Attempts</th>
+                        <th>Lockout Status</th>
+                        <th>Time Remaining</th>
+                        <th>Last Failed Login</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users.items %}
+                        {% set info = lockout_info[user.id] %}
+                        <tr class="{% if info.is_locked %}locked-row{% else %}warning-row{% endif %}">
+                            <td>
+                                <strong>{{ user.username }}</strong>
+                                {% if user.is_admin %}<span class="mini-badge admin">ADMIN</span>{% endif %}
+                                {% if user.is_volunteer %}<span class="mini-badge volunteer">VOL</span>{% endif %}
+                            </td>
+                            <td>{{ user.email }}</td>
+                            <td>
+                                <span class="badge badge-{% if info.failed_attempts >= 5 %}danger{% else %}warning{% endif %}">
+                                    {{ info.failed_attempts }}/5
+                                </span>
+                            </td>
+                            <td>
+                                {% if info.is_locked %}
+                                    <span class="badge badge-danger">🔒 LOCKED</span>
+                                {% else %}
+                                    <span class="badge badge-warning">⚠️ AT RISK</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if info.time_remaining %}
+                                    <div class="countdown-mini" data-seconds="{{ info.time_remaining.total_seconds() }}">
+                                        {{ "%.0f"|format(info.time_remaining.total_seconds() // 60) }}m 
+                                        {{ "%.0f"|format(info.time_remaining.total_seconds() % 60) }}s
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if user.last_failed_login %}
+                                    {{ user.last_failed_login.strftime('%Y-%m-%d %H:%M') }}
+                                {% else %}
+                                    <span class="text-muted">Never</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <form method="POST" action="{{ url_for('admin.unlock_user', user_id=user.id) }}" 
+                                      style="display: inline;">
+                                    <button type="submit" class="btn btn-success btn-small"
+                                            onclick="return confirm('Unlock {{ user.username }}?')">
+                                        🔓 Unlock
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if users.pages > 1 %}
+            <div class="pagination-container">
+                {% if users.has_prev %}
+                    <a href="{{ url_for('admin.locked_users', page=users.prev_num) }}" class="btn btn-secondary">← Previous</a>
+                {% endif %}
+                
+                <span class="pagination-info">
+                    Page {{ users.page }} of {{ users.pages }} 
+                    ({{ users.total }} total locked accounts)
+                </span>
+                
+                {% if users.has_next %}
+                    <a href="{{ url_for('admin.locked_users', page=users.next_num) }}" class="btn btn-secondary">Next →</a>
+                {% endif %}
+            </div>
+        {% endif %}
+        
+    {% else %}
+        <div class="no-data">
+            <h3>✅ No Locked Accounts</h3>
+            <p>Great! No user accounts are currently locked.</p>
+            <a href="{{ url_for('admin.user_list') }}" class="btn btn-primary">Back to All Users</a>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.locked-row {
+    background-color: #fee !important;
+}
+
+.warning-row {
+    background-color: #fff8e1 !important;
+}
+
+.countdown-mini {
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    color: #c53030;
+    font-size: 14px;
+    animation: miniCountdownPulse 2s infinite;
+}
+
+@keyframes miniCountdownPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+.pagination-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    padding: 20px 0;
+}
+
+.pagination-info {
+    color: #666;
+    font-size: 14px;
+}
+
+.no-data {
+    text-align: center;
+    padding: 60px 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.no-data h3 {
+    color: var(--success-color);
+    margin-bottom: 15px;
+    font-size: 24px;
+}
+
+.no-data p {
+    color: #666;
+    margin-bottom: 25px;
+    font-size: 16px;
+}
+
+.stats-summary {
+    margin-bottom: 30px;
+}
+
+.stat-card.danger {
+    border-left: 4px solid var(--danger-color);
+}
+</style>
+
+<script>
+// Mini countdown timers for the admin table
+document.addEventListener('DOMContentLoaded', function() {
+    const countdowns = document.querySelectorAll('.countdown-mini');
+    
+    countdowns.forEach(function(countdown) {
+        const seconds = parseInt(countdown.getAttribute('data-seconds'));
+        if (seconds > 0) {
+            startMiniCountdown(countdown, seconds);
+        }
+    });
+});
+
+function startMiniCountdown(element, totalSeconds) {
+    const interval = setInterval(function() {
+        totalSeconds--;
+        
+        if (totalSeconds <= 0) {
+            clearInterval(interval);
+            element.textContent = 'EXPIRED';
+            element.style.color = '#22543d';
+            element.style.background = '#c6f6d5';
+            element.style.padding = '2px 6px';
+            element.style.borderRadius = '4px';
+            
+            // Show refresh suggestion
+            const row = element.closest('tr');
+            if (row) {
+                row.style.background = '#f0fff4';
+                const message = document.createElement('small');
+                message.textContent = ' ✅ Lockout expired - User can now log in';
+                message.style.color = '#22543d';
+                message.style.fontWeight = 'bold';
+                element.parentNode.appendChild(message);
+            }
+        } else {
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            element.textContent = `${minutes}m ${seconds}s`;
+        }
+    }, 1000);
+}
+</script>
+{% endblock %}

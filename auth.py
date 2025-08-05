@@ -37,53 +37,100 @@ def save_profile_picture(form_picture):
 
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
-    """Enhanced login with universal 2FA support"""
+    """Enhanced login with account lockout messaging"""
     if current_user.is_authenticated:
         return redirect(url_for('home'))
     
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
-        if user and user.check_password(form.password.data):
+        
+        if user:
+            # Check if account is currently locked
+            if user.is_account_locked():
+                time_remaining = user.get_lockout_time_remaining()
+                if time_remaining:
+                    minutes_left = int(time_remaining.total_seconds() / 60)
+                    seconds_left = int(time_remaining.total_seconds() % 60)
+                    
+                    if minutes_left > 0:
+                        time_msg = f"{minutes_left} minute(s) and {seconds_left} second(s)"
+                    else:
+                        time_msg = f"{seconds_left} second(s)"
+                    
+                    flash(f'🔒 Account Locked: Your account has been temporarily locked due to {user.failed_login_attempts} failed login attempts. Please try again in {time_msg}.', 'error')
+                    log_security_event(f'Login attempt on locked account: {user.email}', success=False)
+                    return render_template('login.html', form=form)
+            
+            # Check if account is deactivated
             if not user.is_active:
                 flash('Your account has been deactivated. Please contact support.', 'error')
                 log_security_event(f'Login attempt on deactivated account: {user.email}', success=False)
-                return redirect(url_for('auth.login'))
+                return render_template('login.html', form=form)
             
-            # Check if user has 2FA enabled
-            if user.has_2fa_enabled():
-                # Store user ID in session for 2FA verification
-                session['pending_user_id'] = user.id
-                session['remember_me'] = form.remember_me.data
-                
-                # Generate and send 2FA code
-                two_fa_code = f"{secrets.randbelow(1000000):06d}"
-                
-                # Update 2FA record
-                two_fa = user.two_factor_auth
-                two_fa.temp_code = two_fa_code
-                two_fa.temp_code_expires = datetime.utcnow() + timedelta(minutes=10)
-                db.session.commit()
-                
-                # Send code via email to ANY user (not just Google users)
-                if EmailService.send_2fa_code_email(user, two_fa_code):
-                    flash('A verification code has been sent to your email.', 'info')
-                    return redirect(url_for('auth.two_factor'))
+            # Use enhanced password check with lockout info
+            password_result = user.check_password_with_lockout_info(form.password.data)
+            
+            if password_result['success']:
+                # Successful login
+                if user.has_2fa_enabled():
+                    # Handle 2FA flow
+                    session['pending_user_id'] = user.id
+                    session['remember_me'] = form.remember_me.data
+                    
+                    # Generate and send 2FA code
+                    two_fa_code = f"{secrets.randbelow(1000000):06d}"
+                    
+                    two_fa = user.two_factor_auth
+                    two_fa.temp_code = two_fa_code
+                    two_fa.temp_code_expires = datetime.utcnow() + timedelta(minutes=10)
+                    db.session.commit()
+                    
+                    # Send code via email
+                    if EmailService.send_2fa_code_email(user, two_fa_code):
+                        flash('A verification code has been sent to your email.', 'info')
+                        return redirect(url_for('auth.two_factor'))
+                    else:
+                        flash('Failed to send 2FA code. Please try again later or contact support.', 'error')
+                        return render_template('login.html', form=form)
                 else:
-                    flash('Failed to send 2FA code. Please try again later or contact support.', 'error')
-                    log_security_event(f'2FA email send failed: {user.username}', success=False)
-                    return redirect(url_for('auth.login'))
+                    # Normal login without 2FA
+                    login_user(user, remember=form.remember_me.data)
+                    db.session.commit()
+                    log_security_event(f'User login: {user.username}')
+                    
+                    # Show success message if there were previous failed attempts
+                    if password_result.get('previous_failures', 0) > 0:
+                        flash(f'Welcome back! Your account lockout has been cleared after {password_result["previous_failures"]} failed attempts.', 'success')
+                    
+                    next_page = request.args.get('next')
+                    return redirect(next_page) if next_page else redirect(url_for('home'))
+            
             else:
-                # Normal login without 2FA
-                login_user(user, remember=form.remember_me.data)
-                user.last_login = datetime.utcnow()
-                db.session.commit()
-                log_security_event(f'User login: {user.username}')
-                next_page = request.args.get('next')
-                return redirect(next_page) if next_page else redirect(url_for('home'))
+                # Failed login
+                db.session.commit()  # Save the failed attempt count
+                
+                failed_attempts = password_result['failed_attempts']
+                max_attempts = password_result['max_attempts']
+                
+                if password_result.get('account_locked'):
+                    # Account just got locked
+                    lockout_duration = password_result['lockout_duration']
+                    flash(f'🔒 Account Locked: Too many failed login attempts ({failed_attempts}/{max_attempts}). Your account has been locked for {lockout_duration} minutes for security reasons.', 'error')
+                    log_security_event(f'Account locked due to failed attempts: {user.email}', success=False)
+                else:
+                    # Still have attempts left
+                    attempts_left = max_attempts - failed_attempts
+                    if attempts_left == 1:
+                        flash(f'❌ Invalid password. You have {attempts_left} attempt remaining before your account is locked.', 'error')
+                    else:
+                        flash(f'❌ Invalid password. You have {attempts_left} attempts remaining before your account is locked.', 'error')
+                    log_security_event(f'Failed login attempt ({failed_attempts}/{max_attempts}): {user.email}', success=False)
+        
         else:
+            # User doesn't exist - don't reveal this for security
             flash('Invalid email or password. Please try again.', 'error')
-            log_security_event(f'Failed login attempt for email: {form.email.data}', success=False)
+            log_security_event(f'Failed login attempt for non-existent email: {form.email.data}', success=False)
     
     return render_template('login.html', form=form)
 

@@ -7,12 +7,59 @@
     <h1>Welcome Back to SilverSage</h1>
     <p class="form-subtitle">Please sign in to your account</p>
     
-    <!-- Enhanced Flash Messages -->
+    <!-- Enhanced Flash Messages with Lockout Styling -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
-                <div class="alert alert-{{ 'error' if category == 'error' else category }}" role="alert">
-                    {% if category == 'error' and 'Google' in message %}
+                <div class="alert alert-{{ 'error' if category == 'error' else category }} 
+                    {% if '🔒 Account Locked' in message %}lockout-alert{% endif %}" role="alert">
+                    
+                    {% if '🔒 Account Locked' in message %}
+                        <!-- Special styling for account lockout -->
+                        <div class="lockout-message">
+                            <div class="lockout-icon">🔒</div>
+                            <div class="lockout-content">
+                                <h4>Account Temporarily Locked</h4>
+                                {% set parts = message.split(':') %}
+                                {% if parts|length > 1 %}
+                                    <p class="lockout-reason">{{ parts[1].strip() }}</p>
+                                {% else %}
+                                    <p class="lockout-reason">{{ message }}</p>
+                                {% endif %}
+                                
+                                <div class="lockout-help">
+                                    <h5>Why was my account locked?</h5>
+                                    <ul>
+                                        <li>Your account is locked after 5 incorrect password attempts</li>
+                                        <li>This is a security measure to protect your account</li>
+                                        <li>The lockout automatically expires after 30 minutes</li>
+                                    </ul>
+                                    
+                                    <h5>What can I do?</h5>
+                                    <ul>
+                                        <li>Wait for the lockout period to expire</li>
+                                        <li>Use the "Forgot Password" link to reset your password</li>
+                                        <li>Contact support if you suspect unauthorized access</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    
+                    {% elif 'attempts remaining' in message %}
+                        <!-- Warning for remaining attempts -->
+                        <div class="attempts-warning">
+                            <div class="warning-icon">⚠️</div>
+                            <div class="warning-content">
+                                <h4>Incorrect Password</h4>
+                                <p>{{ message }}</p>
+                                <div class="security-tip">
+                                    <small><strong>Security Tip:</strong> Make sure Caps Lock is off and check your typing carefully.</small>
+                                </div>
+                            </div>
+                        </div>
+                    
+                    {% elif category == 'error' and 'Google' in message %}
+                        <!-- Google OAuth Issues -->
                         <strong>Google OAuth Issue:</strong> {{ message }}
                         <details style="margin-top: 10px;">
                             <summary style="cursor: pointer; color: #0066cc;">🔧 Troubleshooting Help</summary>
@@ -26,7 +73,9 @@
                                 <p><strong>Admin:</strong> <a href="/test-db" target="_blank">Check system status</a></p>
                             </div>
                         </details>
+                    
                     {% else %}
+                        <!-- Regular messages -->
                         {{ message }}
                     {% endif %}
                 </div>
@@ -122,6 +171,113 @@
 </div>
 
 <style>
+/* Enhanced Alert Styling for Account Lockouts */
+.lockout-alert {
+    background: linear-gradient(135deg, #fff5f5, #fed7d7);
+    border: 2px solid #fc8181;
+    border-radius: 12px;
+    padding: 0;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 12px rgba(252, 129, 129, 0.2);
+}
+
+.lockout-message {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+    padding: 20px;
+}
+
+.lockout-icon {
+    font-size: 32px;
+    flex-shrink: 0;
+    margin-top: 5px;
+}
+
+.lockout-content h4 {
+    color: #c53030;
+    margin: 0 0 10px 0;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.lockout-reason {
+    color: #742a2a;
+    font-size: 16px;
+    margin: 0 0 20px 0;
+    line-height: 1.5;
+}
+
+.lockout-help {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid #fc8181;
+}
+
+.lockout-help h5 {
+    color: #c53030;
+    font-size: 16px;
+    margin: 0 0 8px 0;
+    font-weight: 600;
+}
+
+.lockout-help ul {
+    margin: 0 0 15px 0;
+    padding-left: 20px;
+}
+
+.lockout-help li {
+    color: #744210;
+    font-size: 14px;
+    margin-bottom: 5px;
+    line-height: 1.4;
+}
+
+.lockout-help ul:last-child {
+    margin-bottom: 0;
+}
+
+/* Warning for remaining attempts */
+.attempts-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 15px;
+}
+
+.warning-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.warning-content h4 {
+    color: #d69e2e;
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.warning-content p {
+    color: #744210;
+    margin: 0 0 10px 0;
+    font-size: 15px;
+}
+
+.security-tip {
+    background: rgba(237, 137, 54, 0.1);
+    padding: 8px 12px;
+    border-radius: 6px;
+    border-left: 3px solid #ed8936;
+}
+
+.security-tip small {
+    color: #744210;
+    font-size: 13px;
+}
+
+/* Google auth section styles (keeping existing) */
 .google-auth-section {
     margin: 30px 0 20px 0;
 }
@@ -151,11 +307,6 @@
     transform: translateY(-1px);
 }
 
-.btn-google:active {
-    transform: translateY(0);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
 .btn-google-disabled {
     display: flex;
     align-items: center;
@@ -179,11 +330,6 @@
     background: #fff3cd;
     border: 1px solid #ffeaa7;
     border-radius: 4px;
-}
-
-.google-config-help a {
-    color: #856404;
-    text-decoration: underline;
 }
 
 .divider {
@@ -243,7 +389,7 @@
     margin-top: 20px;
 }
 
-/* Enhanced alert styling */
+/* Regular alert styling */
 .alert {
     padding: 15px;
     margin-bottom: 20px;
@@ -252,7 +398,7 @@
     font-size: 16px;
 }
 
-.alert-error {
+.alert-error:not(.lockout-alert) {
     background-color: #f8d7da;
     border-color: #f5c6cb;
     color: #721c24;
@@ -270,17 +416,27 @@
     color: #0c5460;
 }
 
-.alert details {
-    margin-top: 10px;
+.alert-warning {
+    background: linear-gradient(135deg, #fffbf0, #fef5e7);
+    border: 2px solid #f6ad55;
+    color: #744210;
 }
 
-.alert summary {
-    font-weight: 600;
-    padding: 5px 0;
-}
-
-.alert summary:hover {
-    color: #0066cc;
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .lockout-message, .attempts-warning {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+    
+    .lockout-content, .warning-content {
+        width: 100%;
+    }
+    
+    .lockout-help {
+        text-align: left;
+    }
 }
 </style>
 {% endblock %}

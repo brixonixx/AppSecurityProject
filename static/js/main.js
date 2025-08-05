@@ -1,3 +1,5 @@
+// FIXED Password visibility toggle functionality - Add this to your main.js
+
 // Auto-hide flash messages after 5 seconds
 document.addEventListener('DOMContentLoaded', function() {
     const alerts = document.querySelectorAll('.alert');
@@ -31,148 +33,30 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// FIXED Password visibility toggle functionality for specific pages with IMAGE ICONS
+// FIXED Password visibility toggle functionality
 document.addEventListener('DOMContentLoaded', function() {
-    // Handle login page password toggle
-    const loginPasswordField = document.getElementById('login_password');
-    if (loginPasswordField) {
-        const loginToggle = loginPasswordField.parentNode.querySelector('.password-toggle');
-        if (loginToggle) {
-            loginToggle.addEventListener('click', function(e) {
-                e.preventDefault();
-                toggleSpecificPasswordWithImages(loginPasswordField, loginToggle);
-            });
-        }
-    }
-    
-    // Handle register page password toggles
-    const registerPasswordField = document.getElementById('register_password');
-    if (registerPasswordField) {
-        const registerToggle = registerPasswordField.parentNode.querySelector('.password-toggle');
-        if (registerToggle) {
-            registerToggle.addEventListener('click', function(e) {
-                e.preventDefault();
-                toggleSpecificPasswordWithImages(registerPasswordField, registerToggle);
-            });
-        }
-    }
-    
-    const confirmPasswordField = document.getElementById('confirm_password');
-    if (confirmPasswordField) {
-        const confirmToggle = confirmPasswordField.parentNode.querySelector('.password-toggle');
-        if (confirmToggle) {
-            confirmToggle.addEventListener('click', function(e) {
-                e.preventDefault();
-                toggleSpecificPasswordWithImages(confirmPasswordField, confirmToggle);
-            });
-        }
-    }
-    
-    // ADD: Handle admin password toggles
-    const adminPasswordField = document.getElementById('admin_password');
-    if (adminPasswordField) {
-        const adminToggle = adminPasswordField.parentNode.querySelector('.password-toggle');
-        if (adminToggle) {
-            adminToggle.addEventListener('click', function(e) {
-                e.preventDefault();
-                toggleSpecificPasswordWithImages(adminPasswordField, adminToggle);
-            });
-        }
-    }
-    
-    const adminConfirmPasswordField = document.getElementById('admin_confirm_password');
-    if (adminConfirmPasswordField) {
-        const adminConfirmToggle = adminConfirmPasswordField.parentNode.querySelector('.password-toggle');
-        if (adminConfirmToggle) {
-            adminConfirmToggle.addEventListener('click', function(e) {
-                e.preventDefault();
-                toggleSpecificPasswordWithImages(adminConfirmPasswordField, adminConfirmToggle);
-            });
-        }
-    }
-});
-
-// Function to toggle specific password field with IMAGE ICONS
-function toggleSpecificPasswordWithImages(field, toggle) {
-    const icon = toggle.querySelector('img');
-    
-    if (field.type === 'password') {
-        field.type = 'text';
-        if (icon) {
-            icon.src = '/static/uploads/eye-slash.png';
-            icon.alt = 'Hide password';
-        }
-        toggle.setAttribute('aria-label', 'Hide password');
-        toggle.setAttribute('title', 'Hide password');
-    } else {
-        field.type = 'password';
-        if (icon) {
-            icon.src = '/static/uploads/eye.png';
-            icon.alt = 'Show password';
-        }
-        toggle.setAttribute('aria-label', 'Show password');
-        toggle.setAttribute('title', 'Show password');
-    }
-}
-
-// ORIGINAL Password visibility toggle functionality for general use (admin forms)
-function togglePassword(fieldId) {
-    const field = document.getElementById(fieldId);
-    if (!field) return;
-    
-    const wrapper = field.closest('.password-input-wrapper');
-    if (!wrapper) return;
-    
-    const toggle = wrapper.querySelector('.password-toggle');
-    const icon = toggle.querySelector('img');
-    
-    if (field.type === 'password') {
-        field.type = 'text';
-        if (icon) {
-            icon.src = '/static/uploads/eye-slash.png'; // Hidden eye icon
-            icon.alt = 'Hide password';
-        }
-        toggle.setAttribute('aria-label', 'Hide password');
-        toggle.setAttribute('title', 'Hide password');
-    } else {
-        field.type = 'password';
-        if (icon) {
-            icon.src = '/static/uploads/eye.png'; // Visible eye icon
-            icon.alt = 'Show password';
-        }
-        toggle.setAttribute('aria-label', 'Show password');
-        toggle.setAttribute('title', 'Show password');
-    }
-}
-
-// Initialize password toggles for admin forms and other pages
-document.addEventListener('DOMContentLoaded', function() {
-    // Find all password fields that don't have specific IDs and add toggle functionality
-    // UPDATED: Exclude admin password fields since they're handled specifically above
-    const passwordFields = document.querySelectorAll('input[type="password"]:not(#login_password):not(#register_password):not(#confirm_password):not(#admin_password):not(#admin_confirm_password)');
+    // Find all password fields and add toggle functionality
+    const passwordFields = document.querySelectorAll('input[type="password"]');
     
     passwordFields.forEach(function(field, index) {
-        // Ensure the field has an ID for the toggle function
-        if (!field.id) {
-            field.id = 'password-field-' + index;
-        }
-        
-        const wrapper = field.parentNode;
-        
-        // Check if this field already has a toggle (to avoid duplicates)
-        if (wrapper.querySelector('.password-toggle')) {
+        // Check if this field already has a toggle button
+        const existingToggle = field.parentNode.querySelector('.password-toggle');
+        if (existingToggle) {
+            // If toggle already exists, just add the event listener
+            existingToggle.addEventListener('click', function(e) {
+                e.preventDefault();
+                togglePasswordField(field, existingToggle);
+            });
             return;
         }
         
-        // Add password-field class for styling
-        field.classList.add('password-field');
-        
         // Create wrapper if it doesn't exist
+        let wrapper = field.parentNode;
         if (!wrapper.classList.contains('password-input-wrapper')) {
-            const newWrapper = document.createElement('div');
-            newWrapper.className = 'password-input-wrapper';
-            field.parentNode.insertBefore(newWrapper, field);
-            newWrapper.appendChild(field);
+            wrapper = document.createElement('div');
+            wrapper.className = 'password-input-wrapper';
+            field.parentNode.insertBefore(wrapper, field);
+            wrapper.appendChild(field);
         }
         
         // Create toggle button
@@ -190,10 +74,10 @@ document.addEventListener('DOMContentLoaded', function() {
         icon.height = 20;
         toggle.appendChild(icon);
         
-        // Add click event with proper field ID reference
+        // Add click event
         toggle.addEventListener('click', function(e) {
             e.preventDefault();
-            togglePasswordWithElement(field, toggle);
+            togglePasswordField(field, toggle);
         });
         
         // Add toggle to wrapper
@@ -201,8 +85,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Enhanced toggle function that works with the actual elements
-function togglePasswordWithElement(field, toggle) {
+// Function to toggle a specific password field
+function togglePasswordField(field, toggle) {
     const icon = toggle.querySelector('img');
     
     if (field.type === 'password') {
@@ -224,7 +108,168 @@ function togglePasswordWithElement(field, toggle) {
     }
 }
 
-// Enhanced dropdown functionality with hover delay - EXTENDED TO 2 SECONDS
+// Account lockout countdown timer
+document.addEventListener('DOMContentLoaded', function() {
+    const lockoutAlert = document.querySelector('.lockout-alert');
+    
+    if (lockoutAlert) {
+        const lockoutText = lockoutAlert.querySelector('.lockout-reason');
+        if (lockoutText) {
+            const message = lockoutText.textContent;
+            
+            // Extract time from the message
+            const timeMatch = message.match(/(\d+)\s+minute\(s\)\s+and\s+(\d+)\s+second\(s\)|(\d+)\s+second\(s\)/);
+            
+            if (timeMatch) {
+                let totalSeconds;
+                
+                if (timeMatch[1] && timeMatch[2]) {
+                    // Format: "X minute(s) and Y second(s)"
+                    totalSeconds = parseInt(timeMatch[1]) * 60 + parseInt(timeMatch[2]);
+                } else if (timeMatch[3]) {
+                    // Format: "X second(s)"
+                    totalSeconds = parseInt(timeMatch[3]);
+                }
+                
+                if (totalSeconds && totalSeconds > 0) {
+                    // Create countdown element
+                    const countdownContainer = document.createElement('div');
+                    countdownContainer.className = 'lockout-countdown';
+                    countdownContainer.innerHTML = `
+                        <div class="countdown-header">
+                            <h5>⏱️ Time Remaining:</h5>
+                        </div>
+                        <div class="countdown-display">
+                            <span id="lockout-timer">${formatTime(totalSeconds)}</span>
+                        </div>
+                        <div class="countdown-progress">
+                            <div class="progress-bar" id="progress-bar"></div>
+                        </div>
+                        <div class="countdown-info">
+                            <small>Your account will automatically unlock when the timer reaches zero.</small>
+                        </div>
+                    `;
+                    
+                    // Insert countdown after the lockout reason
+                    lockoutText.parentNode.insertBefore(countdownContainer, lockoutText.nextSibling);
+                    
+                    // Start countdown
+                    startLockoutCountdown(totalSeconds);
+                }
+            }
+        }
+    }
+});
+
+function startLockoutCountdown(totalSeconds) {
+    const timerElement = document.getElementById('lockout-timer');
+    const progressBar = document.getElementById('progress-bar');
+    const originalSeconds = totalSeconds;
+    
+    const countdown = setInterval(function() {
+        totalSeconds--;
+        
+        if (timerElement) {
+            timerElement.textContent = formatTime(totalSeconds);
+        }
+        
+        // Update progress bar
+        if (progressBar) {
+            const progressPercentage = ((originalSeconds - totalSeconds) / originalSeconds) * 100;
+            progressBar.style.width = progressPercentage + '%';
+        }
+        
+        // Check if countdown finished
+        if (totalSeconds <= 0) {
+            clearInterval(countdown);
+            showLockoutExpired();
+        }
+    }, 1000);
+}
+
+function formatTime(seconds) {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    
+    if (minutes > 0) {
+        return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    } else {
+        return `${remainingSeconds}s`;
+    }
+}
+
+function showLockoutExpired() {
+    const lockoutAlert = document.querySelector('.lockout-alert');
+    const countdownContainer = document.querySelector('.lockout-countdown');
+    
+    if (countdownContainer) {
+        countdownContainer.innerHTML = `
+            <div class="lockout-expired">
+                <div class="expired-icon">✅</div>
+                <h5>Account Unlocked!</h5>
+                <p>Your account lockout has expired. You can now try logging in again.</p>
+                <button type="button" class="btn btn-success btn-small" onclick="location.reload()">
+                    Refresh Page
+                </button>
+            </div>
+        `;
+    }
+    
+    // Change alert styling to success
+    if (lockoutAlert) {
+        lockoutAlert.classList.remove('lockout-alert');
+        lockoutAlert.classList.add('alert-success');
+        lockoutAlert.style.background = 'linear-gradient(135deg, #f0fff4, #c6f6d5)';
+        lockoutAlert.style.borderColor = '#68d391';
+    }
+}
+
+// Enhanced form submission with lockout check
+document.addEventListener('DOMContentLoaded', function() {
+    const loginForm = document.querySelector('form[action=""]'); // Login form
+    
+    if (loginForm) {
+        loginForm.addEventListener('submit', function(e) {
+            const lockoutAlert = document.querySelector('.lockout-alert');
+            
+            // Prevent submission if account is still locked
+            if (lockoutAlert && !lockoutAlert.classList.contains('alert-success')) {
+                e.preventDefault();
+                
+                // Shake the form to indicate it's locked
+                loginForm.style.animation = 'shake 0.5s ease-in-out';
+                
+                // Show additional warning
+                const existingWarning = document.querySelector('.lockout-submission-warning');
+                if (!existingWarning) {
+                    const warning = document.createElement('div');
+                    warning.className = 'lockout-submission-warning alert alert-warning';
+                    warning.innerHTML = `
+                        <strong>⚠️ Cannot Login:</strong> Your account is still locked. 
+                        Please wait for the lockout period to expire before trying again.
+                    `;
+                    lockoutAlert.parentNode.insertBefore(warning, lockoutAlert.nextSibling);
+                    
+                    // Remove warning after 5 seconds
+                    setTimeout(() => {
+                        if (warning.parentNode) {
+                            warning.parentNode.removeChild(warning);
+                        }
+                    }, 5000);
+                }
+                
+                // Reset animation
+                setTimeout(() => {
+                    loginForm.style.animation = '';
+                }, 500);
+                
+                return false;
+            }
+        });
+    }
+});
+
+// Enhanced dropdown functionality with hover delay
 document.addEventListener('DOMContentLoaded', function() {
     const dropdowns = document.querySelectorAll('.dropdown');
     
@@ -244,7 +289,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 menu.style.visibility = 'visible';
             });
             
-            // Mouse leave events with EXTENDED delay (2 seconds instead of 1)
+            // Mouse leave events with delay
             dropdown.addEventListener('mouseleave', function() {
                 isHovering = false;
                 hoverTimeout = setTimeout(function() {
@@ -255,9 +300,9 @@ document.addEventListener('DOMContentLoaded', function() {
                             if (!isHovering) {
                                 menu.style.display = 'none';
                             }
-                        }, 300); // Match CSS transition duration
+                        }, 300);
                     }
-                }, 2000); // EXTENDED: 2 second delay instead of 1 second
+                }, 2000);
             });
             
             // Prevent menu from disappearing when hovering over the menu itself
@@ -278,7 +323,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             }
                         }, 300);
                     }
-                }, 2000); // EXTENDED: 2 second delay instead of 1 second
+                }, 2000);
             });
             
             // Handle mobile touch events
@@ -352,7 +397,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Smooth scroll for anchor links - Landing Page
+// Smooth scroll for anchor links
 document.addEventListener('DOMContentLoaded', function() {
     const anchorLinks = document.querySelectorAll('a[href^="#"]');
     
@@ -377,7 +422,6 @@ document.addEventListener('DOMContentLoaded', function() {
     forms.forEach(function(form) {
         const submitBtn = form.querySelector('input[type="submit"], button[type="submit"]');
         if (submitBtn) {
-            // Store original text
             submitBtn.setAttribute('data-original-text', submitBtn.innerHTML);
         }
         
@@ -386,7 +430,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 submitBtn.disabled = true;
                 submitBtn.innerHTML = 'Processing...';
                 
-                // Re-enable after 10 seconds as fallback
                 setTimeout(function() {
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = submitBtn.getAttribute('data-original-text') || 'Submit';
@@ -401,7 +444,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const navCards = document.querySelectorAll('.admin-nav-card');
     
     navCards.forEach(function(card, index) {
-        // Add staggered animation on load
         card.style.opacity = '0';
         card.style.transform = 'translateY(20px)';
         
@@ -409,15 +451,13 @@ document.addEventListener('DOMContentLoaded', function() {
             card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
             card.style.opacity = '1';
             card.style.transform = 'translateY(0)';
-        }, index * 100); // Stagger by 100ms
+        }, index * 100);
     });
 });
 
-// Landing Page Specific JavaScript
+// Landing Page animations
 document.addEventListener('DOMContentLoaded', function() {
-    // Only run landing page animations if we're on the landing page
     if (document.body.classList.contains('landing-page')) {
-        // Simple animation on scroll for landing page
         const observerOptions = {
             threshold: 0.1,
             rootMargin: '0px 0px -50px 0px'
@@ -432,7 +472,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }, observerOptions);
         
-        // Observe feature cards and impact items
         document.querySelectorAll('.feature-card, .impact-item').forEach(card => {
             card.style.opacity = '0';
             card.style.transform = 'translateY(20px)';
@@ -440,7 +479,6 @@ document.addEventListener('DOMContentLoaded', function() {
             observer.observe(card);
         });
         
-        // Animate stats numbers on scroll
         const statsObserver = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
@@ -459,13 +497,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Animate numbers counting up
 function animateNumber(element) {
     const text = element.textContent;
     const number = parseInt(text.replace(/\D/g, ''));
     const suffix = text.replace(/\d/g, '');
-    const duration = 2000; // 2 seconds
-    const increment = number / (duration / 16); // 60fps
+    const duration = 2000;
+    const increment = number / (duration / 16);
     let current = 0;
     
     const timer = setInterval(() => {
@@ -480,7 +517,6 @@ function animateNumber(element) {
 
 // Enhanced navigation for mobile devices
 document.addEventListener('DOMContentLoaded', function() {
-    // Add mobile menu toggle functionality if needed
     const navToggle = document.querySelector('.nav-toggle');
     const navLinks = document.querySelector('.nav-links');
     
@@ -490,7 +526,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Close mobile menu when clicking on a link
     document.querySelectorAll('.nav-links a').forEach(link => {
         link.addEventListener('click', function() {
             if (navLinks) {
@@ -502,7 +537,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Form accessibility improvements
 document.addEventListener('DOMContentLoaded', function() {
-    // Add focus management for better accessibility
     const inputs = document.querySelectorAll('input, textarea, select');
     
     inputs.forEach(input => {
@@ -519,7 +553,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Initial check for pre-filled values
         if (input.value) {
             input.parentNode.classList.add('has-value');
         }
@@ -547,26 +580,22 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Field validation function
 function validateField(field) {
     const value = field.value.trim();
     const type = field.type;
     let isValid = true;
     
-    // Remove existing error classes
     field.classList.remove('error');
     const existingError = field.parentNode.querySelector('.field-error');
     if (existingError) {
         existingError.remove();
     }
     
-    // Check if required field is empty
     if (field.hasAttribute('required') && !value) {
         isValid = false;
         showFieldError(field, 'This field is required');
     }
     
-    // Email validation
     if (type === 'email' && value) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(value)) {
@@ -575,7 +604,6 @@ function validateField(field) {
         }
     }
     
-    // Password validation for registration
     if (field.id === 'register_password' && value) {
         if (value.length < 8) {
             isValid = false;
@@ -583,7 +611,6 @@ function validateField(field) {
         }
     }
     
-    // Confirm password validation
     if (field.id === 'confirm_password' && value) {
         const passwordField = document.getElementById('register_password');
         if (passwordField && value !== passwordField.value) {
@@ -595,7 +622,6 @@ function validateField(field) {
     return isValid;
 }
 
-// Show field error function
 function showFieldError(field, message) {
     field.classList.add('error');
     
@@ -612,7 +638,6 @@ function showFieldError(field, message) {
 
 // Admin form volunteer checkbox functionality
 document.addEventListener('DOMContentLoaded', function() {
-    // Handle volunteer checkbox on admin forms
     const volunteerCheckbox = document.getElementById('is_volunteer');
     const approveGroup = document.getElementById('approve-volunteer-group');
     
@@ -629,17 +654,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // Initial check
         toggleApproveOption();
-        
-        // Listen for changes
         volunteerCheckbox.addEventListener('change', toggleApproveOption);
     }
 });
 
-// Console log for debugging (remove in production)
-console.log('SilverSage main.js loaded successfully');
-console.log('Password toggle functionality initialized with image icons');
-console.log('Landing page animations ready');
-console.log('Form validation enhanced');
-console.log('Admin password fields support added');
+console.log('SilverSage main.js loaded successfully - Password toggles restored!');
