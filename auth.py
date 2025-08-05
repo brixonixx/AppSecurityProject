@@ -282,9 +282,10 @@ def profile():
             # Hash the saved file for integrity logging
             file_hash = hash_file(file_path)
             log_security_event(
-                f'Profile picture uploaded for {current_user.username}',
-                details={'file': secure_name, 'hash': file_hash}
+                "Profile picture uploaded",
+                details=f"file: {secure_name}, hash: {file_hash}"
             )
+
 
         # Sanitize and update user details
         current_user.first_name = sanitize_input(form.first_name.data)
