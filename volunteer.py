@@ -13,7 +13,7 @@ from sqlalchemy import text
 from functools import wraps
 from collections import defaultdict
 import time
-
+from security import *
 
 volunteer = Blueprint('volunteer', __name__)
 
@@ -41,6 +41,7 @@ def get_current_username():
 ### ------------------ VOLUNTEER ROUTES ------------------- ###
 
 @volunteer.route("/")
+@rate_limit(max_requests=3, window_seconds=60)
 def volunteer_home():
     """Main volunteer page - redirects based on volunteer status"""
     if not current_user.is_authenticated:
@@ -54,6 +55,7 @@ def volunteer_home():
         return render_template('volunteer.html')
 
 @volunteer.route("/request", methods=['GET', 'POST'])
+@rate_limit(max_requests=3, window_seconds=60)
 @login_required
 def volunteer_request():
     """Handle volunteer help requests"""
@@ -94,6 +96,7 @@ def volunteer_request():
     return render_template('volunteer_request.html')
 
 @volunteer.route("/map")
+@rate_limit(max_requests=3, window_seconds=60)
 @login_required
 def volunteer_map():
     """Volunteer map page - only for registered volunteers"""
@@ -115,6 +118,7 @@ def volunteer_map():
         return redirect(url_for('volunteer.volunteer_home'))
 
 @volunteer.route("/register", methods=['GET', 'POST'])
+@rate_limit(max_requests=3, window_seconds=60)
 @login_required
 def register_volunteer():
     """Register as a volunteer"""
@@ -144,6 +148,7 @@ def register_volunteer():
 ### ------------------ VOLUNTEER REQUEST MANAGEMENT ------------------- ###
 
 @volunteer.route("/go/<int:request_id>", methods=['DELETE', 'POST'])
+@rate_limit(max_requests=3, window_seconds=60)
 @login_required
 def volunteer_go_to_request(request_id):
     """Accept and remove a volunteer request"""
@@ -176,6 +181,7 @@ def volunteer_go_to_request(request_id):
             return redirect(url_for('volunteer.volunteer_map'))
 
 @volunteer.route("/claim/<int:request_id>", methods=['POST'])
+@rate_limit(max_requests=3, window_seconds=60)
 @login_required
 def claim_volunteer_request(request_id):
     """Claim a volunteer request"""
@@ -198,6 +204,7 @@ def claim_volunteer_request(request_id):
         return jsonify({"success": False, "error": "An error occurred"}), 500
 
 @volunteer.route("/delete/<int:request_id>", methods=['POST'])
+@rate_limit(max_requests=3, window_seconds=60)
 @login_required
 def delete_volunteer_request(request_id):
     """Delete own volunteer request"""
@@ -223,6 +230,7 @@ def delete_volunteer_request(request_id):
 ### ------------------ API ENDPOINTS ------------------- ###
 
 @volunteer.route("/requests_json")
+@rate_limit(max_requests=3, window_seconds=60)
 def volunteer_requests_json():
     """JSON API for volunteer requests"""
     try:
@@ -259,6 +267,7 @@ def volunteer_requests_json():
 
 # For backward compatibility with existing templates/links
 @volunteer.route("/new", methods=['GET', 'POST'])
+@rate_limit(max_requests=3, window_seconds=60)
 @login_required
 def new_volunteer_request():
     """Legacy route - redirects to register if not volunteer, otherwise to request"""

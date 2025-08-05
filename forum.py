@@ -3,6 +3,7 @@ from flask import render_template, request, redirect, url_for, flash, session, B
 from flask_login import login_required, current_user
 from models import *
 import logging
+from security import *
 
 from flask import Flask, render_template, request, session, redirect, url_for, flash, jsonify
 from markupsafe import escape
@@ -21,6 +22,7 @@ forum = Blueprint('forum', __name__)
 ### ------------------ FORUM ROUTES ------------------- ###
 
 @forum.route("/")
+@rate_limit(max_requests=3, window_seconds=60)
 def list_posts():
     try:
         posts = Post.query.order_by(Post.id.desc()).all()
@@ -33,6 +35,7 @@ def list_posts():
     return render_template('forum.html', posts=posts)
 
 @forum.route("/post/<int:post_id>")
+@rate_limit(max_requests=3, window_seconds=60)
 def view_post(post_id):
     try:
         post = Post.query.get_or_404(post_id)
@@ -46,12 +49,14 @@ def view_post(post_id):
     return render_template('post_detail.html', post=post, comments=comments)
 
 @forum.route("/new", methods=['GET', 'POST'])
+@rate_limit(max_requests=3, window_seconds=60)
 @login_required
 def new_post():
     if request.method == 'POST':
         try:
-            title = request.form.get('title')
-            content = request.form.get('content')
+            title = sanitize_input(request.form.get('title'))
+            content = sanitize_input(request.form.get('content'))
+
             
             if not title or not content:
                 flash("Title and content are required", "warning")
@@ -74,6 +79,7 @@ def new_post():
 
 
 @forum.route("/delete/<int:post_id>", methods=['POST'])
+@rate_limit(max_requests=3, window_seconds=60)
 @login_required
 def delete_post(post_id):
     try:
@@ -98,11 +104,13 @@ def delete_post(post_id):
 ### ------------------ COMMENT ROUTES ------------------- ###
 
 @forum.route("/post/<int:post_id>/comment", methods=['POST'])
+@rate_limit(max_requests=3, window_seconds=60)
 @login_required
 def add_comment(post_id):
     try:
         post = Post.query.get_or_404(post_id)
-        comment_content = request.form.get('comment')
+        comment_content = sanitize_input(request.form.get('comment'))
+
         
         if comment_content and comment_content.strip():
             comment = Comment(
@@ -124,6 +132,7 @@ def add_comment(post_id):
     return redirect(url_for('forum.view_post', post_id=post_id))
 
 @forum.route("/comment/delete/<int:comment_id>", methods=['POST'])
+@rate_limit(max_requests=3, window_seconds=60)
 @login_required
 def delete_comment(comment_id):
     try:
