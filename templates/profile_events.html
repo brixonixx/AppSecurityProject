@@ -12,8 +12,7 @@
             <div class="card">
                 <img src="{{ event.image_file }}" class="card-img-top" alt="{{ event.title }}">
                 <div class="card-body">
-                    <h5 class="card-title">Points to be Earned: {{ event.points_to_be_earned }}</h5>
-                    <h6 class="card-title">{{ event.title }}</h6>
+                    <h5 class="card-title">{{ event.title }}</h5>
                     <p class="card-text">{{ event.description }}</p>
                     <form action="{{ url_for('events.unsignup_event', event_id=event.event_id, user_id=current_user.id) }}" method="POST" style="display: inline;">
                         <button type="submit" class="btn btn-danger" >Cancel</button>

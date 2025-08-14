@@ -738,75 +738,359 @@ def view_volunteer(volunteer_id):
         flash('Volunteer features are not available yet. Please run the database migration first.', 'warning')
         return redirect(url_for('admin.admin_dashboard'))
 
+
 @admin.route("/admin/events", methods=["GET", "POST"])
 @admin_required
 def event_management():
+    """Enhanced event management with comprehensive input sanitization and security"""
     log_security_event('Admin accessed event management')
-    
+
     form = EventForm()
     events = []
     user_id = current_user.id
+
     if not user_id:
         logging.warning("Something is wrong, no user ID found for this user.")
-        flash("Unexpected error occured", "danger")    
+        log_security_event('Event management accessed without valid user ID', success=False)
+        flash("Unexpected error occurred", "danger")
         return redirect(url_for("admin.admin_dashboard"))
-    
+
     try:
         if request.method == "POST" and form.validate_on_submit():
+            # Sanitize form inputs
+            title = sanitize_input(form.title.data.strip()) if form.title.data else ""
+            description = sanitize_input(form.description.data.strip()) if form.description.data else ""
+
+            # Validate sanitized inputs
+            validation_errors = []
+
+            # Title validation
+            if not title:
+                validation_errors.append("Event title is required")
+            elif len(title) > 200:
+                validation_errors.append("Event title is too long (maximum 200 characters)")
+            elif len(title) < 3:
+                validation_errors.append("Event title is too short (minimum 3 characters)")
+
+            # Description validation
+            if not description:
+                validation_errors.append("Event description is required")
+            elif len(description) > 2000:
+                validation_errors.append("Event description is too long (maximum 2000 characters)")
+            elif len(description) < 10:
+                validation_errors.append("Event description is too short (minimum 10 characters)")
+
+            # Check for potentially malicious patterns
+            suspicious_patterns = ['<script', 'javascript:', 'vbscript:', 'onload=', 'onerror=', 'onclick=']
+            for pattern in suspicious_patterns:
+                if pattern.lower() in title.lower() or pattern.lower() in description.lower():
+                    validation_errors.append("Input contains potentially unsafe content")
+                    log_security_event(f'Admin attempted to create event with suspicious content',
+                                       success=False, details=f'Pattern: {pattern}')
+                    break
+
+            if validation_errors:
+                for error in validation_errors:
+                    flash(error, "danger")
+                return render_template("admin/event_management.html", form=form, events=events)
+
+            # Handle file upload with enhanced security
             file = form.image_file.data
             image_file = None
-            if file and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                filepath = os.path.join(Config.UPLOAD_FOLDER, filename)
-                file.save(filepath)
-                image_file = f"/static/uploads/{filename}"
+
+            if file and file.filename:
+                # Validate file
+                if not allowed_file(file.filename):
+                    log_security_event(f'Admin attempted to upload invalid file type: {file.filename}', success=False)
+                    flash("Invalid file type. Only PNG, JPG and JPEG are allowed.", "danger")
+                    return render_template("admin/event_management.html", form=form, events=events)
+
+                # Use secure filename function from security module
+                try:
+                    from security import secure_filename_custom, alt_secure_filename_custom
+
+                    # Try the enhanced secure filename function first
+                    filename = alt_secure_filename_custom(file.filename)
+                    if not filename:
+                        # Fallback to basic secure filename
+                        filename = secure_filename_custom(file.filename)
+                        if not filename:
+                            # Final fallback to werkzeug's secure_filename
+                            filename = secure_filename(file.filename)
+                            if not filename or filename == '':
+                                raise ValueError("Unable to generate secure filename")
+
+                    # Ensure upload directory exists
+                    upload_dir = Config.UPLOAD_FOLDER
+                    if not os.path.exists(upload_dir):
+                        os.makedirs(upload_dir, mode=0o755)
+
+                    filepath = os.path.join(upload_dir, filename)
+
+                    # Additional security check - ensure file doesn't already exist
+                    counter = 1
+                    base_filename, ext = os.path.splitext(filename)
+                    while os.path.exists(filepath):
+                        filename = f"{base_filename}_{counter}{ext}"
+                        filepath = os.path.join(upload_dir, filename)
+                        counter += 1
+                        if counter > 1000:  # Prevent infinite loop
+                            raise ValueError("Too many file conflicts")
+
+                    # Save file
+                    file.save(filepath)
+
+                    # Verify file was saved correctly and get file hash for integrity
+                    if os.path.exists(filepath):
+                        try:
+                            from security import hash_file
+                            file_hash = hash_file(filepath)
+                            log_security_event(f'Admin uploaded event image: {filename}',
+                                               success=True, details=f'Hash: {file_hash[:16]}...')
+                        except:
+                            pass  # Hash function failed, but file upload succeeded
+
+                        image_file = f"/static/uploads/{filename}"
+                    else:
+                        raise ValueError("File was not saved successfully")
+
+                except Exception as e:
+                    logging.exception(f"Error processing uploaded file: {e}")
+                    log_security_event(f'Admin file upload failed', success=False, details=str(e))
+                    flash("Error processing uploaded file. Please try again.", "danger")
+                    return render_template("admin/event_management.html", form=form, events=events)
             else:
-                flash("Invalid file type. Only PNG, JPG and JPEG are allowed.", "danger")
-                return render_template("admin/event_management.html", form=form, events=events)
-            
+                # No file uploaded - this might be okay depending on requirements
+                log_security_event('Admin created event without image', success=True)
+
+            # Create new event with sanitized data
             new_event = Event(
-                title=form.title.data,
-                description=form.description.data,
+                title=title,  # Already sanitized
+                description=description,  # Already sanitized
                 user_id=user_id,
                 image_file=image_file
             )
+
             db.session.add(new_event)
             db.session.commit()
-            
+
             logging.info(f"Added new event ID {new_event.event_id}")
+            log_security_event(f'Admin created event: {title}', success=True,
+                               details=f'Event ID: {new_event.event_id}')
             flash("New event added successfully!", "success")
             return redirect(url_for("admin.event_management"))
+
+        # Load and display existing events with sanitized data
         all_events = db.session.query(Event).all()
-        events = [e.to_dict() for e in all_events]
-    
+        events = []
+
+        for event in all_events:
+            event_dict = event.to_dict()
+            # Sanitize event data for display
+            if 'title' in event_dict and event_dict['title']:
+                event_dict['title'] = sanitize_input(event_dict['title'])
+            if 'description' in event_dict and event_dict['description']:
+                event_dict['description'] = sanitize_input(event_dict['description'])
+            events.append(event_dict)
+
     except Exception as e:
-        logging.exception("Error occured when managing events")
+        logging.exception("Error occurred when managing events")
+        log_security_event('Admin event management failed', success=False, details=str(e))
         db.session.rollback()
-        flash(f"An error occured when managing events.", "danger")
-    
+        flash(f"An error occurred when managing events.", "danger")
+
     if request.method == "POST" and not form.validate_on_submit():
+        log_security_event('Admin event form validation failed', success=False)
         flash("Error in the submitted data. Please validate and resubmit", "danger")
-    
+
     return render_template("admin/event_management.html", form=form, events=events)
+
 
 @admin.route("/admin/events/delete/<event_id>", methods=["POST"])
 @admin_required
 def delete_event(event_id):
+    """Enhanced event deletion with input validation and security logging"""
     try:
-        event = db.session.query(Event).get(event_id)
-        if not event:
+        # Sanitize and validate event_id
+        try:
+            event_id_int = int(event_id)
+            if event_id_int <= 0:
+                raise ValueError("Invalid event ID")
+        except (ValueError, TypeError):
+            log_security_event(f'Admin attempted to delete event with invalid ID: {event_id}', success=False)
             flash("Invalid event ID", "danger")
             return redirect(url_for("admin.event_management"))
 
-        id = event.event_id
+        # Get event from database
+        event = db.session.query(Event).get(event_id_int)
+        if not event:
+            log_security_event(f'Admin attempted to delete non-existent event: {event_id}', success=False)
+            flash("Invalid event ID", "danger")
+            return redirect(url_for("admin.event_management"))
+
+        # Store event details for logging before deletion
+        event_title = sanitize_input(event.title) if event.title else f"Event {event_id}"
+        event_description_preview = (sanitize_input(event.description)[:50] + "...") if event.description and len(
+            event.description) > 50 else sanitize_input(event.description) if event.description else "No description"
+
+        # Check if event has registered users
+        registered_users_count = len(event.users) if hasattr(event, 'users') else 0
+
+        if registered_users_count > 0:
+            log_security_event(f'Admin deleted event with {registered_users_count} registered users',
+                               success=True, details=f'Event: {event_title}')
+            flash(
+                f"Warning: Event had {registered_users_count} registered users who have been automatically unregistered.",
+                "warning")
+
+        # Handle image file deletion if exists
+        if event.image_file:
+            try:
+                # Extract filename from image_file path
+                if event.image_file.startswith('/static/uploads/'):
+                    filename = event.image_file.replace('/static/uploads/', '')
+                    filepath = os.path.join(Config.UPLOAD_FOLDER, filename)
+
+                    if os.path.exists(filepath):
+                        os.remove(filepath)
+                        log_security_event(f'Admin deleted event image file: {filename}', success=True)
+                    else:
+                        log_security_event(f'Event image file not found for deletion: {filename}', success=False)
+
+            except Exception as file_error:
+                logging.exception(f"Error deleting event image file: {file_error}")
+                log_security_event(f'Failed to delete event image file', success=False, details=str(file_error))
+                # Continue with event deletion even if file deletion fails
+
+        # Delete the event
         db.session.delete(event)
         db.session.commit()
-        flash(f"Event {id} deleted successfully!", "success")
+
+        log_security_event(f'Admin deleted event: {event_title}', success=True,
+                           details=f'ID: {event_id_int}, Users affected: {registered_users_count}')
+        flash(f"Event '{event_title}' deleted successfully!", "success")
+
     except Exception as e:
         db.session.rollback()
-        logging.exception(f"An exception occured when deleting an event: {e}")
-        flash(f"An error occured when deleting event {id}", "danger")
+        logging.exception(f"An exception occurred when deleting an event: {e}")
+        log_security_event(f'Admin event deletion failed', success=False,
+                           details=f'Event ID: {event_id}, Error: {str(e)}')
+        flash(f"An error occurred when deleting the event", "danger")
+
     return redirect(url_for("admin.event_management"))
+
+
+# Additional helper function for bulk event operations
+@admin.route("/admin/events/delete-all", methods=["POST"])
+@admin_required
+def delete_all_events():
+    """Delete all events with confirmation (emergency function)"""
+    try:
+        # Get confirmation from form
+        confirmation = request.form.get('confirmation', '').strip()
+        confirmation_sanitized = sanitize_input(confirmation).lower()
+
+        if confirmation_sanitized != 'delete all events':
+            log_security_event('Admin attempted bulk event deletion without proper confirmation', success=False)
+            flash('Confirmation text does not match. Events were not deleted.', 'error')
+            return redirect(url_for('admin.event_management'))
+
+        # Count events and users affected before deletion
+        all_events = Event.query.all()
+        event_count = len(all_events)
+        total_affected_users = 0
+
+        if event_count == 0:
+            flash('No events to delete.', 'info')
+            return redirect(url_for('admin.event_management'))
+
+        # Count affected users and collect event info for logging
+        event_info = []
+        for event in all_events:
+            user_count = len(event.users) if hasattr(event, 'users') else 0
+            total_affected_users += user_count
+            event_title = sanitize_input(event.title) if event.title else f"Event {event.event_id}"
+            event_info.append(f"{event_title} ({user_count} users)")
+
+        # Delete all events
+        Event.query.delete()
+        db.session.commit()
+
+        log_security_event(f'Admin deleted all events (count: {event_count})', success=True,
+                           details=f'Events: {"; ".join(event_info[:10])}{"..." if len(event_info) > 10 else ""}. Total users affected: {total_affected_users}')
+
+        flash(
+            f'Successfully deleted all {event_count} events from the database! {total_affected_users} user registrations were removed.',
+            'success')
+
+    except Exception as e:
+        db.session.rollback()
+        logging.exception(f"An exception occurred when deleting all events: {e}")
+        log_security_event('Admin failed to delete all events', success=False,
+                           details=f'Error: {str(e)}')
+        flash("An error occurred when deleting all events", "danger")
+
+    return redirect(url_for('admin.event_management'))
+
+
+# Enhanced event validation function
+def validate_event_input(title, description, file=None):
+    """
+    Comprehensive validation for event inputs
+    Returns: (is_valid, errors, sanitized_data)
+    """
+    errors = []
+    sanitized_data = {}
+
+    # Sanitize inputs
+    title_clean = sanitize_input(title.strip()) if title else ""
+    description_clean = sanitize_input(description.strip()) if description else ""
+
+    # Title validation
+    if not title_clean:
+        errors.append("Event title is required")
+    elif len(title_clean) < 3:
+        errors.append("Event title must be at least 3 characters long")
+    elif len(title_clean) > 200:
+        errors.append("Event title cannot exceed 200 characters")
+    else:
+        sanitized_data['title'] = title_clean
+
+    # Description validation
+    if not description_clean:
+        errors.append("Event description is required")
+    elif len(description_clean) < 10:
+        errors.append("Event description must be at least 10 characters long")
+    elif len(description_clean) > 2000:
+        errors.append("Event description cannot exceed 2000 characters")
+    else:
+        sanitized_data['description'] = description_clean
+
+    # File validation
+    if file and file.filename:
+        if not allowed_file(file.filename):
+            errors.append("Invalid file type. Only PNG, JPG, and JPEG files are allowed")
+        else:
+            # Additional file size check (if needed)
+            # Note: This would require checking the file size
+            sanitized_data['has_file'] = True
+
+    # Check for suspicious content
+    suspicious_patterns = [
+        '<script', 'javascript:', 'vbscript:', 'data:text/html',
+        'onload=', 'onerror=', 'onclick=', 'onmouseover=',
+        '<?php', '<%', '<jsp:', '${', '{{',
+        'eval(', 'exec(', 'system(', 'shell_exec('
+    ]
+
+    combined_text = f"{title_clean} {description_clean}".lower()
+    for pattern in suspicious_patterns:
+        if pattern.lower() in combined_text:
+            errors.append("Input contains potentially unsafe content")
+            log_security_event(f'Suspicious pattern detected in event input: {pattern}', success=False)
+            break
+
+    return (len(errors) == 0, errors, sanitized_data)
 
 @admin.route('/admin/posts')
 @admin_required
