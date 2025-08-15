@@ -139,6 +139,7 @@ def sanitize_input(input_string, allow_html=False):
             input_string = input_string.replace(char, escape)
     
     return input_string.strip()
+
 def alt_sanitize_input(input_string, allow_html=False) -> str:
     """
     Sanitize user input to prevent common web attacks
