@@ -1,0 +1,564 @@
+{% extends "base.html" %}
+{% block title %}Chatbot - Community Forum{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chatbot-page {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        margin: -20px;
+        padding: 0;
+        position: relative;
+    }
+
+    .main-content {
+        padding: 20px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: calc(100vh - 120px);
+        margin-top: 20px;
+    }
+
+    .chat-container {
+        width: 500px;
+        height: 700px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        animation: slideUp 0.6s ease-out;
+    }
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .chat-header {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+        padding: 20px;
+        text-align: center;
+        position: relative;
+    }
+
+    .chat-header h1 {
+        font-size: 1.4em;
+        font-weight: 600;
+    }
+
+    .chat-header .subtitle {
+        font-size: 0.9em;
+        opacity: 0.9;
+        margin-top: 5px;
+    }
+
+    .chat-header::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4);
+        background-size: 400% 400%;
+        animation: gradient 3s ease infinite;
+    }
+
+    @keyframes gradient {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+
+    .chat-actions {
+        padding: 10px 20px;
+        background: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .action-btn {
+        padding: 5px 10px;
+        border: 1px solid #ddd;
+        background: white;
+        border-radius: 15px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all 0.3s;
+    }
+
+    .action-btn:hover {
+        background: #e9ecef;
+    }
+
+    #connectionStatus {
+        margin-left: auto;
+        font-size: 12px;
+        color: #28a745;
+    }
+
+    .chat-messages {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        scroll-behavior: smooth;
+    }
+
+    .chat-messages::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .chat-messages::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+
+    .chat-messages::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 10px;
+    }
+
+    .message {
+        margin-bottom: 15px;
+        animation: fadeIn 0.4s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .message.user {
+        text-align: right;
+    }
+
+    .message.bot {
+        text-align: left;
+    }
+
+    .message-bubble {
+        display: inline-block;
+        max-width: 80%;
+        padding: 12px 16px;
+        border-radius: 18px;
+        font-size: 14px;
+        line-height: 1.4;
+        word-wrap: break-word;
+    }
+
+    .message.user .message-bubble {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-bottom-right-radius: 5px;
+    }
+
+    .message.bot .message-bubble {
+        background: #f8f9fa;
+        color: #333;
+        border: 1px solid #e9ecef;
+        border-bottom-left-radius: 5px;
+    }
+
+    .message.bot .message-bubble.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+
+    .message-time {
+        font-size: 10px;
+        color: #999;
+        margin-top: 5px;
+    }
+
+    .chat-input {
+        padding: 20px;
+        background: white;
+        border-top: 1px solid #e9ecef;
+    }
+
+    .input-group {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .message-input {
+        flex: 1;
+        padding: 12px 16px;
+        border: 2px solid #e9ecef;
+        border-radius: 25px;
+        font-size: 14px;
+        outline: none;
+        transition: all 0.3s ease;
+    }
+
+    .message-input:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .message-input:disabled {
+        background: #f8f9fa;
+        cursor: not-allowed;
+    }
+
+    .send-button {
+        width: 45px;
+        height: 45px;
+        border: none;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        font-size: 18px;
+    }
+
+    .send-button:hover:not(:disabled) {
+        transform: scale(1.05);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+    }
+
+    .send-button:active {
+        transform: scale(0.95);
+    }
+
+    .send-button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+    }
+
+    .typing-indicator {
+        display: none;
+        margin-bottom: 15px;
+        text-align: left;
+    }
+
+    .typing-dots {
+        display: inline-block;
+        padding: 12px 16px;
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 18px;
+        border-bottom-left-radius: 5px;
+    }
+
+    .typing-dots span {
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        background: #999;
+        border-radius: 50%;
+        margin: 0 2px;
+        animation: typing 1.4s infinite ease-in-out;
+    }
+
+    .typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+    @keyframes typing {
+        0%, 80%, 100% {
+            transform: scale(0.8);
+            opacity: 0.5;
+        }
+        40% {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    .welcome-message {
+        text-align: center;
+        color: #666;
+        margin: 20px 0;
+        font-style: italic;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 15px;
+        border: 1px solid #e9ecef;
+    }
+
+    @media (max-width: 600px) {
+        .main-content {
+            padding: 10px;
+            margin-top: 10px;
+            min-height: calc(100vh - 140px);
+        }
+        
+        .chat-container {
+            width: 100%;
+            height: calc(100vh - 140px);
+            margin: 0;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="chatbot-page">
+    <div class="main-content">
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>🤖 SageBot</h1>
+            <div class="subtitle">Your friendly SilverSage AI assistant</div>
+        </div>
+        
+        <div class="chat-actions">
+            <button class="action-btn" onclick="clearChat()">🗑️ Clear Chat</button>
+            <button class="action-btn" onclick="loadHistory()">📜 History</button>
+            <span id="connectionStatus">●Connected</span>
+        </div>
+        
+        <div class="chat-messages" id="chatMessages">
+            <div class="welcome-message">
+                👋 Hello! I'm SageBot, your friendly AI assistant for SilverSage. 
+                <br><br>
+                I can help you with:
+                <br>• General questions about health and wellness
+                <br>• Technology support
+                <br>• SilverSage platform features
+                <br>• Event and activity recommendations
+                <br><br>
+                How can I assist you today?
+            </div>
+        </div>
+
+        <div class="typing-indicator" id="typingIndicator">
+            <div class="typing-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="chat-input">
+            <div class="input-group">
+                <input 
+                    type="text" 
+                    class="message-input" 
+                    id="messageInput" 
+                    placeholder="Type your message..."
+                    maxlength="500"
+                >
+                <button class="send-button" id="sendButton">
+                    ➤
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+class SilverSageChatbot {
+    constructor() {
+        this.messagesContainer = document.getElementById('chatMessages');
+        this.messageInput = document.getElementById('messageInput');
+        this.sendButton = document.getElementById('sendButton');
+        this.typingIndicator = document.getElementById('typingIndicator');
+        this.connectionStatus = document.getElementById('connectionStatus');
+        
+        this.init();
+        this.loadChatHistory();
+    }
+
+    init() {
+        this.sendButton.addEventListener('click', () => this.sendMessage());
+        this.messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                this.sendMessage();
+            }
+        });
+    }
+
+    async sendMessage() {
+        const message = this.messageInput.value.trim();
+        if (!message) return;
+
+        // Add user message to chat
+        this.addMessage(message, 'user');
+        this.messageInput.value = '';
+        this.setInputState(false);
+        
+        this.showTypingIndicator();
+        
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || ''
+                },
+                body: JSON.stringify({ message: message })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            
+            this.hideTypingIndicator();
+            this.addMessage(data.response, 'bot', data.timestamp);
+            this.updateConnectionStatus('connected');
+            
+        } catch (error) {
+            console.error('Chat API error:', error);
+            this.hideTypingIndicator();
+            this.addMessage(
+                "I'm sorry, I'm having trouble connecting right now. Please try again in a moment. If the problem persists, please contact support.", 
+                'bot', 
+                null, 
+                true
+            );
+            this.updateConnectionStatus('error');
+        } finally {
+            this.setInputState(true);
+        }
+    }
+
+    addMessage(text, sender, timestamp = null, isError = false) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${sender}`;
+        
+        const bubbleDiv = document.createElement('div');
+        bubbleDiv.className = `message-bubble ${isError ? 'error' : ''}`;
+        bubbleDiv.textContent = text;
+        
+        messageDiv.appendChild(bubbleDiv);
+        
+        if (timestamp) {
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'message-time';
+            timeDiv.textContent = new Date(timestamp).toLocaleTimeString();
+            messageDiv.appendChild(timeDiv);
+        }
+        
+        // Remove welcome message on first user message
+        if (sender === 'user') {
+            const welcomeMsg = this.messagesContainer.querySelector('.welcome-message');
+            if (welcomeMsg) {
+                welcomeMsg.remove();
+            }
+        }
+        
+        this.messagesContainer.appendChild(messageDiv);
+        this.scrollToBottom();
+    }
+
+    showTypingIndicator() {
+        this.typingIndicator.style.display = 'block';
+        this.scrollToBottom();
+    }
+
+    hideTypingIndicator() {
+        this.typingIndicator.style.display = 'none';
+    }
+
+    setInputState(enabled) {
+        this.messageInput.disabled = !enabled;
+        this.sendButton.disabled = !enabled;
+    }
+
+    updateConnectionStatus(status) {
+        const statusEl = this.connectionStatus;
+        switch(status) {
+            case 'connected':
+                statusEl.style.color = '#28a745';
+                statusEl.textContent = '● Connected';
+                break;
+            case 'error':
+                statusEl.style.color = '#dc3545';
+                statusEl.textContent = '● Connection Error';
+                break;
+            case 'connecting':
+                statusEl.style.color = '#ffc107';
+                statusEl.textContent = '● Connecting...';
+                break;
+        }
+    }
+
+    async loadChatHistory() {
+        try {
+            const response = await fetch('/api/chat/history');
+            if (response.ok) {
+                const data = await response.json();
+                const history = data.history || [];
+                
+                // Clear welcome message if there's history
+                if (history.length > 0) {
+                    const welcomeMsg = this.messagesContainer.querySelector('.welcome-message');
+                    if (welcomeMsg) welcomeMsg.remove();
+                }
+                
+                // Add messages from history
+                for (const msg of history) {
+                    this.addMessage(msg.content, msg.role === 'user' ? 'user' : 'bot');
+                }
+            }
+        } catch (error) {
+            console.warn('Could not load chat history:', error);
+        }
+    }
+
+    scrollToBottom() {
+        setTimeout(() => {
+            this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+        }, 100);
+    }
+}
+
+// Global functions for action buttons
+async function clearChat() {
+    if (confirm('Are you sure you want to clear the chat history?')) {
+        try {
+            const response = await fetch('/api/chat/clear', { 
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || ''
+                }
+            });
+            if (response.ok) {
+                location.reload();
+            }
+        } catch (error) {
+            console.error('Error clearing chat:', error);
+        }
+    }
+}
+
+function loadHistory() {
+    alert('Chat history is automatically loaded when you start chatting!');
+}
+
+// Initialize the chatbot when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+    new SilverSageChatbot();
+});
+</script>
+{% endblock %}

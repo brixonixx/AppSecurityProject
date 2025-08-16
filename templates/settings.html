@@ -22,9 +22,10 @@
     <h1 id="main-title">
         ⚙️ {{ get_text('settings_title') if get_text else 'Settings' }}
     </h1>
+    
 
-    <form method="POST" id="accessibility-form">
-        {{ csrf_token() if csrf_token else '' }}
+    <form method="POST" id="accessibility-form" action="/settings">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
 
         <!-- Font Size Section -->
         <div class="setting-section">
@@ -432,6 +433,9 @@ document.addEventListener('DOMContentLoaded', function() {
         saveButton.disabled = true;
 
         const formData = new FormData(this);
+        // Ensure CSRF token is included
+        const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+        formData.set('csrf_token', csrfToken);
 
         fetch('/settings', {
             method: 'POST',

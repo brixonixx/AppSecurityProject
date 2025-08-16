@@ -176,6 +176,15 @@ a {{
     font-weight: 500 !important;
 }}
 
+/* Remove underlines from navigation and dropdown links */
+.navbar a, .dropdown-menu a, .nav-links a {{
+    text-decoration: none !important;
+}}
+
+.dropdown-menu a:hover {{
+    text-decoration: none !important;
+}}
+
 /* Card and content spacing */
 .card {{
     padding: 20px !important;
@@ -445,7 +454,67 @@ INTERFACE_TEXTS = {
         'description': 'Description',
         'welcome': 'Welcome',
         'logout': 'Logout',
-        'login': 'Login'
+        'login': 'Login',
+        'home': 'Home',
+        'dashboard': 'Dashboard',
+        'events': 'Events',
+        'profile_settings': 'Profile Settings',
+        'security_settings': 'Security Settings',
+        'signed_up_events': 'Signed-up Events',
+        'admin_panel': 'Admin Panel',
+        'admin_dashboard': 'Admin Dashboard',
+        'user_management': 'User Management',
+        'create_user': 'Create User',
+        'volunteer_management': 'Volunteer Management',
+        'audit_logs': 'Audit Logs',
+        'export_users': 'Export Users',
+        'account_information': 'Your Account Information',
+        
+        # Home page translations
+        'welcome_back': 'Welcome back',
+        'what_would_you_like_to_do': 'What would you like to do today?',
+        'my_profile': 'My Profile',
+        'view_update_personal_info': 'View and update your personal information',
+        'view_account_statistics': 'View your account statistics and activity',
+        'manage_security_preferences': 'Manage passwords, 2FA, and security preferences',
+        'manage_users_system': 'Manage users and system settings',
+        'account_at_glance': 'Your Account at a Glance',
+        'account_status': 'Account Status',
+        'active': 'Active',
+        'member_since': 'Member Since',
+        'last_login': 'Last Login',
+        'first_login': 'This is your first login!',
+        'account_type': 'Account Type',
+        'administrator': 'Administrator',
+        'standard_user': 'Standard User',
+        'need_help': 'Need Help?',
+        'contact_support_message': 'If you have any questions or need assistance, please don\'t hesitate to contact our support team.',
+        'email_support': 'Email Support',
+        'call_support': 'Call Support',
+        'user_guide': 'User Guide',
+        
+        # Dashboard translations
+        'profile_details': 'Profile Details',
+        'name': 'Name',
+        'email': 'Email',
+        'age': 'Age',
+        'contact': 'Contact',
+        'not_set': 'Not set',
+        'update_profile': 'Update Profile',
+        'change_password': 'Change Password',
+        
+        # Volunteer translations
+        'send_help_share_location': 'Send Help (Share Location)',
+        'register_as_volunteer': 'Register as Volunteer',
+        'click_button_to_share_location': 'Click the button above to share your location and request help.',
+        'current_help_requests': 'Current Help Requests',
+        'loading_map': 'Loading map...',
+        
+        # Events translations
+        'exclusive_events': 'Exclusive Events',
+        'sign_up_now': 'Sign Up Now!',
+        'no_events_available': 'No events available at the moment.',
+        'confirm_signup': 'Are you sure you want to sign up for'
     },
     'zh': {
         'settings_title': '设置',
@@ -520,7 +589,67 @@ INTERFACE_TEXTS = {
         'description': '描述',
         'welcome': '欢迎',
         'logout': '注销',
-        'login': '登录'
+        'login': '登录',
+        'home': '主页',
+        'dashboard': '仪表板',
+        'events': '活动',
+        'profile_settings': '个人设置',
+        'security_settings': '安全设置',
+        'signed_up_events': '已报名活动',
+        'admin_panel': '管理面板',
+        'admin_dashboard': '管理仪表板',
+        'user_management': '用户管理',
+        'create_user': '创建用户',
+        'volunteer_management': '志愿者管理',
+        'audit_logs': '审计日志',
+        'export_users': '导出用户',
+        'account_information': '您的账户信息',
+        
+        # Home page translations
+        'welcome_back': '欢迎回来',
+        'what_would_you_like_to_do': '您今天想做什么？',
+        'my_profile': '我的个人资料',
+        'view_update_personal_info': '查看和更新您的个人信息',
+        'view_account_statistics': '查看您的账户统计和活动',
+        'manage_security_preferences': '管理密码、双重验证和安全首选项',
+        'manage_users_system': '管理用户和系统设置',
+        'account_at_glance': '您的账户概览',
+        'account_status': '账户状态',
+        'active': '活跃',
+        'member_since': '成员自',
+        'last_login': '上次登录',
+        'first_login': '这是您的首次登录！',
+        'account_type': '账户类型',
+        'administrator': '管理员',
+        'standard_user': '标准用户',
+        'need_help': '需要帮助？',
+        'contact_support_message': '如果您有任何问题或需要帮助，请随时联系我们的支持团队。',
+        'email_support': '邮件支持',
+        'call_support': '电话支持',
+        'user_guide': '用户指南',
+        
+        # Dashboard translations
+        'profile_details': '个人详情',
+        'name': '姓名',
+        'email': '邮箱',
+        'age': '年龄',
+        'contact': '联系方式',
+        'not_set': '未设置',
+        'update_profile': '更新个人资料',
+        'change_password': '更改密码',
+        
+        # Volunteer translations
+        'send_help_share_location': '发送帮助（共享位置）',
+        'register_as_volunteer': '注册为志愿者',
+        'click_button_to_share_location': '点击上面的按钮来共享您的位置并请求帮助。',
+        'current_help_requests': '当前帮助请求',
+        'loading_map': '地图加载中...',
+        
+        # Events translations
+        'exclusive_events': '专属活动',
+        'sign_up_now': '立即报名！',
+        'no_events_available': '目前没有可用的活动。',
+        'confirm_signup': '您确定要报名参加'
     }
 }
 

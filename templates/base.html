@@ -1,10 +1,16 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ accessibility_settings.language if accessibility_settings else 'en' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}SilverSage{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <!-- Global accessibility CSS -->
+    {% if accessibility_css %}
+        {{ accessibility_css | safe }}
+    {% endif %}
+    
     {% block extra_css %}{% endblock %}
 </head>
 <body>
