@@ -147,7 +147,7 @@ def login():
 
 @auth.route('/two-factor', methods=['GET', 'POST'])
 def two_factor():
-    """Handle 2FA verification during login - works for ALL users"""
+    """Handle 2FA verification during login - Fixed backup code logic"""
     if 'pending_user_id' not in session:
         flash('No pending authentication found.', 'error')
         return redirect(url_for('auth.login'))
@@ -162,47 +162,102 @@ def two_factor():
     if form.validate_on_submit():
         two_fa = user.two_factor_auth
         
-        # Check main verification code
-        if form.code.data and two_fa.verify_temp_code(form.code.data):
-            # Clear temp code
-            two_fa.temp_code = None
-            two_fa.temp_code_expires = None
-            db.session.commit()
-            
-            # Complete login
-            remember_me = session.pop('remember_me', False)
-            session.pop('pending_user_id', None)
-            
-            login_user(user, remember=remember_me)
-            user.last_login = datetime.utcnow()
-            db.session.commit()
-            log_security_event(f'User login with 2FA: {user.username}')
-            
-            next_page = request.args.get('next')
-            return redirect(next_page) if next_page else redirect(url_for('home'))
+        # Get form data and strip whitespace
+        verification_code = form.code.data.strip() if form.code.data else ''
+        backup_code = form.backup_code.data.strip() if form.backup_code.data else ''
         
-        # Check backup code
-        elif form.backup_code.data and two_fa.is_backup_code_valid(form.backup_code.data):
-            db.session.commit()
-            
-            # Complete login
-            remember_me = session.pop('remember_me', False)
-            session.pop('pending_user_id', None)
-            
-            login_user(user, remember=remember_me)
-            user.last_login = datetime.utcnow()
-            db.session.commit()
-            log_security_event(f'User login with backup code: {user.username}')
-            
-            flash('You used a backup code. Consider generating new ones in Security Settings.', 'warning')
-            next_page = request.args.get('next')
-            return redirect(next_page) if next_page else redirect(url_for('home'))
+        # Check which type of code was provided
+        if verification_code and not backup_code:
+            # User provided main verification code
+            if two_fa.verify_temp_code(verification_code):
+                # Clear temp code
+                two_fa.temp_code = None
+                two_fa.temp_code_expires = None
+                db.session.commit()
+                
+                # Complete login
+                remember_me = session.pop('remember_me', False)
+                session.pop('pending_user_id', None)
+                
+                login_user(user, remember=remember_me)
+                user.last_login = datetime.utcnow()
+                db.session.commit()
+                log_security_event(f'User login with 2FA: {user.username}')
+                
+                next_page = request.args.get('next')
+                return redirect(next_page) if next_page else redirect(url_for('home'))
+            else:
+                flash('Invalid or expired verification code. Please try again.', 'error')
+                log_security_event(f'Failed 2FA attempt (main code): {user.username}', success=False)
+        
+        elif backup_code and not verification_code:
+            # User provided backup code
+            if two_fa.is_backup_code_valid(backup_code):
+                db.session.commit()
+                
+                # Complete login
+                remember_me = session.pop('remember_me', False)
+                session.pop('pending_user_id', None)
+                
+                login_user(user, remember=remember_me)
+                user.last_login = datetime.utcnow()
+                db.session.commit()
+                log_security_event(f'User login with backup code: {user.username}')
+                
+                flash('You used a backup code. Consider generating new ones in Security Settings.', 'warning')
+                next_page = request.args.get('next')
+                return redirect(next_page) if next_page else redirect(url_for('home'))
+            else:
+                flash('Invalid backup code. Please check your backup codes and try again.', 'error')
+                log_security_event(f'Failed 2FA attempt (backup code): {user.username}', success=False)
+        
+        elif verification_code and backup_code:
+            # User provided both - this shouldn't happen with proper UI, but handle it
+            flash('Please provide either a verification code OR a backup code, not both.', 'error')
         
         else:
-            flash('Invalid verification code. Please try again.', 'error')
-            log_security_event(f'Failed 2FA attempt: {user.username}', success=False)
+            # Neither provided (should be caught by form validation)
+            flash('Please enter either a verification code or a backup code.', 'error')
     
     return render_template('auth/two_factor.html', form=form, user=user)
+
+@auth.route('/debug/create-test-2fa-user')
+def create_test_2fa_user():
+    """Debug route to create a test user with 2FA enabled"""
+    if not current_app.debug:
+        return "Debug routes only available in debug mode", 403
+    
+    try:
+        from email_service import EmailService
+        user, two_fa = EmailService.create_test_user_with_2fa()
+        
+        backup_codes = two_fa.backup_codes.split(',')
+        
+        return f"""
+        <h1>Test 2FA User Created</h1>
+        <p><strong>Email:</strong> {user.email}</p>
+        <p><strong>Password:</strong> TestPassword123!</p>
+        <p><strong>2FA Status:</strong> {'Enabled' if user.has_2fa_enabled() else 'Disabled'}</p>
+        
+        <h2>Backup Codes (save these for testing):</h2>
+        <ul>
+        {''.join(f'<li><code>{code}</code></li>' for code in backup_codes)}
+        </ul>
+        
+        <h2>How to test:</h2>
+        <ol>
+            <li>Go to <a href="{url_for('auth.login')}">Login</a></li>
+            <li>Use email: {user.email} and password: TestPassword123!</li>
+            <li>When prompted for 2FA, use any of the backup codes above</li>
+            <li>The backup code should work and log you in</li>
+        </ol>
+        
+        <p><strong>Note:</strong> Each backup code can only be used once!</p>
+        """
+        
+    except Exception as e:
+        return f"Error creating test user: {str(e)}"
+
 
 @auth.route('/register', methods=['GET', 'POST'])
 def register():

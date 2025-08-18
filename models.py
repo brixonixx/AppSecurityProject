@@ -326,6 +326,20 @@ class TwoFactorAuth(db.Model):
             self.last_used = datetime.utcnow()
             return True
         return False
+    
+    def debug_backup_codes(self):
+        """Debug method to show backup codes (development only)"""
+        if not current_app.debug:
+            return "Debug only"
+        
+        if self.backup_codes:
+            codes = self.backup_codes.split(',')
+            return {
+                'total_codes': len(codes),
+                'remaining_codes': codes,
+                'codes_used': 10 - len(codes)
+            }
+        return {'total_codes': 0, 'remaining_codes': [], 'codes_used': 0}
 
 # Keep all your existing models below (PasswordHistory, AuditLog, etc.)
 class PasswordHistory(db.Model):

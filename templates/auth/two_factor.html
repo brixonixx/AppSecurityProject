@@ -31,24 +31,25 @@
             <div class="input-help">Enter the 6-digit code from your email</div>
         </div>
         
+        <div class="or-divider">
+            <span>OR</span>
+        </div>
+        
         <div class="backup-code-section">
-            <details>
-                <summary>Can't access your email? Use a backup code</summary>
-                <div class="backup-content">
-                    <div class="form-group">
-                        {{ form.backup_code.label }}
-                        {{ form.backup_code(class="form-control backup-input", placeholder="12345678") }}
-                        {% for error in form.backup_code.errors %}
-                            <span class="error-text">{{ error }}</span>
-                        {% endfor %}
-                        <div class="input-help">Enter one of your 8-digit backup codes</div>
-                    </div>
-                    
-                    <div class="backup-warning">
-                        <p><strong>Note:</strong> Each backup code can only be used once. After using a backup code, consider generating new ones.</p>
-                    </div>
+            <div class="backup-content">
+                <div class="form-group">
+                    {{ form.backup_code.label(class="backup-label") }}
+                    {{ form.backup_code(class="form-control backup-input", placeholder="12345678") }}
+                    {% for error in form.backup_code.errors %}
+                        <span class="error-text">{{ error }}</span>
+                    {% endfor %}
+                    <div class="input-help">Enter one of your 8-digit backup codes</div>
                 </div>
-            </details>
+                
+                <div class="backup-warning">
+                    <p><strong>⚠️ Note:</strong> Each backup code can only be used once. After using a backup code, consider generating new ones in Security Settings.</p>
+                </div>
+            </div>
         </div>
         
         <div class="form-group">
@@ -138,34 +139,48 @@
     padding: 20px;
 }
 
+.or-divider {
+    text-align: center;
+    margin: 25px 0;
+    position: relative;
+}
+
+.or-divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: #dee2e6;
+}
+
+.or-divider span {
+    background: white;
+    padding: 0 20px;
+    color: #666;
+    font-weight: 600;
+    font-size: 14px;
+}
+
 .backup-code-section {
     background: var(--light-bg);
     border-radius: 8px;
     padding: 20px;
     margin-bottom: 25px;
+    border: 2px solid transparent;
+    transition: border-color 0.3s;
 }
 
-.backup-code-section details {
-    cursor: pointer;
+.backup-code-section.active {
+    border-color: var(--primary-color);
+    background: #f8f9ff;
 }
 
-.backup-code-section summary {
-    color: var(--primary-color);
+.backup-label {
     font-weight: 600;
-    font-size: 16px;
-    padding: 10px;
-    border-radius: 6px;
-    transition: background-color 0.3s;
-}
-
-.backup-code-section summary:hover {
-    background-color: rgba(44, 82, 130, 0.1);
-}
-
-.backup-content {
-    padding: 20px 10px 10px 10px;
-    border-top: 1px solid #dee2e6;
-    margin-top: 15px;
+    color: var(--primary-color);
+    margin-bottom: 10px;
 }
 
 .backup-input {
@@ -174,6 +189,11 @@
     font-weight: bold;
     text-align: center;
     letter-spacing: 4px;
+}
+
+.backup-input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(44, 82, 130, 0.1);
 }
 
 .backup-warning {
@@ -313,8 +333,13 @@
 </style>
 
 <script>
-// Auto-format code input
-document.querySelector('.code-input').addEventListener('input', function(e) {
+// Get form elements
+const codeInput = document.querySelector('.code-input');
+const backupInput = document.querySelector('.backup-input');
+const backupSection = document.querySelector('.backup-code-section');
+
+// Auto-format and handle main verification code input
+codeInput.addEventListener('input', function(e) {
     let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
     if (value.length > 6) {
         value = value.slice(0, 6);
@@ -323,19 +348,22 @@ document.querySelector('.code-input').addEventListener('input', function(e) {
     
     // Clear backup code when main code is entered
     if (value.length > 0) {
-        document.querySelector('.backup-input').value = '';
+        backupInput.value = '';
+        backupSection.classList.remove('active');
     }
     
-    // Auto-submit when complete (optional)
+    // Auto-submit when complete (with slight delay)
     if (value.length === 6) {
         setTimeout(function() {
-            document.querySelector('form').submit();
-        }, 500);
+            if (codeInput.value.length === 6 && !backupInput.value) {
+                document.querySelector('form').submit();
+            }
+        }, 800);
     }
 });
 
-// Auto-format backup code input
-document.querySelector('.backup-input').addEventListener('input', function(e) {
+// Auto-format and handle backup code input
+backupInput.addEventListener('input', function(e) {
     let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
     if (value.length > 8) {
         value = value.slice(0, 8);
@@ -344,32 +372,108 @@ document.querySelector('.backup-input').addEventListener('input', function(e) {
     
     // Clear main code when backup code is entered
     if (value.length > 0) {
-        document.querySelector('.code-input').value = '';
+        codeInput.value = '';
+        backupSection.classList.add('active');
+    } else {
+        backupSection.classList.remove('active');
     }
     
-    // Auto-submit when complete (optional)
+    // Auto-submit when complete (with slight delay)
     if (value.length === 8) {
         setTimeout(function() {
-            document.querySelector('form').submit();
-        }, 500);
+            if (backupInput.value.length === 8 && !codeInput.value) {
+                document.querySelector('form').submit();
+            }
+        }, 800);
+    }
+});
+
+// Visual feedback for which field is active
+codeInput.addEventListener('focus', function() {
+    backupSection.classList.remove('active');
+});
+
+backupInput.addEventListener('focus', function() {
+    if (backupInput.value) {
+        backupSection.classList.add('active');
     }
 });
 
 // Focus on code input when page loads
 document.addEventListener('DOMContentLoaded', function() {
-    document.querySelector('.code-input').focus();
+    codeInput.focus();
 });
 
-// Prevent form submission if both fields are empty
+// Enhanced form submission validation
 document.querySelector('form').addEventListener('submit', function(e) {
-    const code = document.querySelector('.code-input').value.trim();
-    const backupCode = document.querySelector('.backup-input').value.trim();
+    const code = codeInput.value.trim();
+    const backupCode = backupInput.value.trim();
     
     if (!code && !backupCode) {
         e.preventDefault();
-        alert('Please enter either a verification code or a backup code.');
-        document.querySelector('.code-input').focus();
+        alert('Please enter either a 6-digit verification code or an 8-digit backup code.');
+        codeInput.focus();
+        return false;
     }
+    
+    if (code && backupCode) {
+        e.preventDefault();
+        alert('Please enter either a verification code OR a backup code, not both.');
+        // Clear both and focus on main input
+        codeInput.value = '';
+        backupInput.value = '';
+        backupSection.classList.remove('active');
+        codeInput.focus();
+        return false;
+    }
+    
+    // Validate code formats
+    if (code && (code.length !== 6 || !/^\d{6}$/.test(code))) {
+        e.preventDefault();
+        alert('Verification code must be exactly 6 digits.');
+        codeInput.focus();
+        return false;
+    }
+    
+    if (backupCode && (backupCode.length !== 8 || !/^\d{8}$/.test(backupCode))) {
+        e.preventDefault();
+        alert('Backup code must be exactly 8 digits.');
+        backupInput.focus();
+        return false;
+    }
+    
+    return true;
+});
+
+// Add paste handling for both inputs
+codeInput.addEventListener('paste', function(e) {
+    setTimeout(function() {
+        let value = codeInput.value.replace(/\D/g, '');
+        if (value.length > 6) {
+            value = value.slice(0, 6);
+        }
+        codeInput.value = value;
+        
+        if (value.length > 0) {
+            backupInput.value = '';
+            backupSection.classList.remove('active');
+        }
+    }, 10);
+});
+
+backupInput.addEventListener('paste', function(e) {
+    setTimeout(function() {
+        let value = backupInput.value.replace(/\D/g, '');
+        if (value.length > 8) {
+            value = value.slice(0, 8);
+        }
+        backupInput.value = value;
+        
+        if (value.length > 0) {
+            codeInput.value = '';
+            backupSection.classList.add('active');
+        }
+    }, 10);
 });
 </script>
 {% endblock %}

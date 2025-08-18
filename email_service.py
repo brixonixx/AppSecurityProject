@@ -281,3 +281,58 @@ The SilverSage Team
             return False, "SMTP authentication failed - check email credentials"
         except Exception as e:
             return False, f"Email configuration error: {str(e)}"
+        
+    @staticmethod
+    def generate_test_backup_codes():
+        """Generate test backup codes for development/testing"""
+        import secrets
+        
+        # Generate 10 backup codes
+        backup_codes = []
+        for i in range(10):
+            code = f"{secrets.randbelow(100000000):08d}"
+            backup_codes.append(code)
+        
+        return backup_codes
+    
+    @staticmethod
+    def create_test_user_with_2fa(username="testuser", email="test@example.com"):
+        """Create a test user with 2FA enabled for testing backup codes"""
+        from models import User, TwoFactorAuth, db
+        import secrets
+        
+        # Check if user already exists
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            return existing_user, existing_user.two_factor_auth
+        
+        # Create test user
+        user = User(
+            username=username,
+            email=email,
+            first_name="Test",
+            last_name="User",
+            is_active=True
+        )
+        user.set_password("TestPassword123!")
+        
+        db.session.add(user)
+        db.session.flush()  # Get user ID
+        
+        # Create 2FA setup
+        backup_codes = EmailService.generate_test_backup_codes()
+        
+        two_fa = TwoFactorAuth(
+            user_id=user.id,
+            is_enabled=True,
+            backup_codes=','.join(backup_codes)
+        )
+        
+        db.session.add(two_fa)
+        db.session.commit()
+        
+        print(f"Test user created: {email}")
+        print(f"Password: TestPassword123!")
+        print(f"Backup codes: {backup_codes}")
+        
+        return user, two_fa

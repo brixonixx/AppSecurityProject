@@ -1,4 +1,4 @@
-# Updated forms.py - Add 2FA and password reset forms
+# Updated forms.py - Fixed TwoFactorForm to properly handle backup codes
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
 from wtforms import StringField, PasswordField, SubmitField, IntegerField, BooleanField, HiddenField
@@ -17,9 +17,9 @@ class LoginForm(FlaskForm):
     submit = SubmitField('Login')
 
 class TwoFactorForm(FlaskForm):
-    """Form for 2FA verification during login"""
+    """Form for 2FA verification during login - Fixed to properly handle backup codes"""
     code = StringField('Verification Code', validators=[
-        DataRequired(message='Verification code is required'),
+        Optional(),  # Changed from DataRequired to Optional
         Length(min=6, max=8, message='Invalid code length')
     ])
     backup_code = StringField('Or use backup code', validators=[
@@ -27,6 +27,36 @@ class TwoFactorForm(FlaskForm):
         Length(min=8, max=8, message='Backup codes are 8 digits')
     ])
     submit = SubmitField('Verify')
+    
+    def validate(self, extra_validators=None):
+        """Custom validation to ensure either code or backup_code is provided"""
+        # First run the standard validation
+        rv = FlaskForm.validate(self, extra_validators)
+        
+        # Check if at least one of the fields has data
+        code_provided = self.code.data and self.code.data.strip()
+        backup_code_provided = self.backup_code.data and self.backup_code.data.strip()
+        
+        if not code_provided and not backup_code_provided:
+            # Add error to both fields
+            self.code.errors.append('Please enter either a verification code or a backup code')
+            self.backup_code.errors.append('Please enter either a verification code or a backup code')
+            rv = False
+        
+        # Additional validation for each field if provided
+        if code_provided:
+            # Validate code format (should be 6 digits)
+            if not re.match(r'^\d{6}$', self.code.data.strip()):
+                self.code.errors.append('Verification code must be 6 digits')
+                rv = False
+        
+        if backup_code_provided:
+            # Validate backup code format (should be 8 digits)
+            if not re.match(r'^\d{8}$', self.backup_code.data.strip()):
+                self.backup_code.errors.append('Backup code must be 8 digits')
+                rv = False
+        
+        return rv
 
 class RegistrationForm(FlaskForm):
     username = StringField('Username', validators=[
