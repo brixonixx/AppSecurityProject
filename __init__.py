@@ -135,8 +135,9 @@ class SilverSageAI:
             'events': "You can find upcoming events in the Events section of SilverSage. There are often social gatherings, health workshops, and hobby groups to join!",
             'forum': "The Forum is a great place to connect with other community members. You can share experiences, ask questions, or join discussions on topics you're interested in.",
             'volunteer': "Volunteering is a wonderful way to stay active and give back! Check out the Volunteer section to find opportunities that match your interests and skills.",
-            'health': "For health-related questions, I recommend consulting with your healthcare provider. However, I can share general wellness tips about staying active, eating well, and maintaining social connections.",
-            'technology': "Technology can seem overwhelming, but take it one step at a time! I'm here to help explain things simply. What specific technology question do you have?",
+            'recommend': "we personally recommend morning tai chi and community garden as they promote healthy active living and also teaches valuable skills!",
+            'password': "you can change your password at security settings which can be accessed from the user profile dropdown!",
+            'text': "you can make your text larger by at general settings which can be accessed from the user profile dropdown!",
             'thanks': "You're very welcome! I'm always here to help whenever you need assistance.",
             'goodbye': "Goodbye for now! Feel free to chat with me anytime you visit SilverSage. Have a wonderful day!"
         }
